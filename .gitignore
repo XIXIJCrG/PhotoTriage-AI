@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local app state and generated output
+*.codex-bak
+start-triage-server.bat
+triage_*.csv
+*_picks.txt
+_废片/
+_discarded/
+.triage_cache/
+
+# User photos and media exports
+*.jpg
+*.jpeg
+*.png
+*.raf
+*.arw
+*.cr2
+*.cr3
+*.nef
+*.dng
+*.xmp
+stickers_icons/
+stickers_out/
+
+# Keep documentation screenshots/assets versionable
+!docs/**/*.jpg
+!docs/**/*.jpeg
+!docs/**/*.png
+
+# Local IDE/agent settings
+.claude/
+.vscode/
+.idea/
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# OS
+Thumbs.db
+.DS_Store

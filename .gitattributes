@@ -1,0 +1,14 @@
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.raf binary
+*.arw binary
+*.cr2 binary
+*.cr3 binary
+*.nef binary
+*.dng binary

@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest an improvement or provider integration.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What workflow would this improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like PhotoTriage AI to do?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - GUI
+        - Model provider
+        - Metadata / XMP
+        - Folder browsing
+        - Packaging
+        - Documentation
+        - Other
+    validations:
+      required: true
