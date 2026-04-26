@@ -13,23 +13,34 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from core.i18n import tr
 
 SCENE_CHOICES = [
-    "(全部)", "人像", "街拍", "风光", "建筑", "静物", "动物",
-    "夜景", "微距", "美食", "活动", "其他",
+    ("scene.all", ""),
+    ("scene.portrait", "人像"),
+    ("scene.street", "街拍"),
+    ("scene.landscape", "风光"),
+    ("scene.architecture", "建筑"),
+    ("scene.still_life", "静物"),
+    ("scene.animal", "动物"),
+    ("scene.night", "夜景"),
+    ("scene.macro", "微距"),
+    ("scene.food", "美食"),
+    ("scene.event", "活动"),
+    ("scene.other", "其他"),
 ]
 
 SORT_CHOICES = [
-    ("综合分 降序", "综合评分", False),
-    ("综合分 升序", "综合评分", True),
-    ("艺术分 降序", "艺术总分", False),
-    ("技术分 降序", "技术总分", False),
-    ("美感 降序", "美感", False),
-    ("神态 降序", "神态", False),
-    ("眼神 降序", "眼神", False),
-    ("构图 降序", "构图", False),
-    ("光线 降序", "光线", False),
-    ("文件名 升序", "JPG文件名", True),
+    ("sort.overall_desc", "综合评分", False),
+    ("sort.overall_asc", "综合评分", True),
+    ("sort.aesthetic_desc", "艺术总分", False),
+    ("sort.technical_desc", "技术总分", False),
+    ("sort.flattering_desc", "美感", False),
+    ("sort.expression_desc", "神态", False),
+    ("sort.eye_desc", "眼神", False),
+    ("sort.composition_desc", "构图", False),
+    ("sort.lighting_desc", "光线", False),
+    ("sort.filename_asc", "JPG文件名", True),
 ]
 
 
@@ -51,46 +62,49 @@ class FilterBar(QWidget):
         self.min_spin = QSpinBox()
         self.min_spin.setRange(0, 10)
         self.min_spin.setValue(0)
-        self.min_spin.setToolTip("综合分下限(包含)")
+        self.min_spin.setToolTip(tr("filter.score_min_tip"))
 
         self.max_spin = QSpinBox()
         self.max_spin.setRange(0, 10)
         self.max_spin.setValue(10)
-        self.max_spin.setToolTip("综合分上限(包含)")
+        self.max_spin.setToolTip(tr("filter.score_max_tip"))
 
         self.scene_combo = QComboBox()
-        self.scene_combo.addItems(SCENE_CHOICES)
+        for label_key, value in SCENE_CHOICES:
+            self.scene_combo.addItem(tr(label_key), value)
 
         self.has_person_combo = QComboBox()
-        self.has_person_combo.addItems(["(不限)", "有人", "无人"])
+        self.has_person_combo.addItem(tr("filter.any"), "")
+        self.has_person_combo.addItem(tr("filter.has_person"), "是")
+        self.has_person_combo.addItem(tr("filter.no_person"), "否")
 
         self.sort_combo = QComboBox()
-        for label, _, _ in SORT_CHOICES:
-            self.sort_combo.addItem(label)
+        for label_key, _, _ in SORT_CHOICES:
+            self.sort_combo.addItem(tr(label_key))
 
         self.count_label = QLabel("")
         self.count_label.setStyleSheet("color: #666;")
 
-        self.reset_btn = QPushButton("重置")
+        self.reset_btn = QPushButton(tr("filter.reset"))
 
-        self.group_cb = QCheckBox("按拍摄时间分组")
-        self.group_cb.setToolTip("按 EXIF 时间聚类,同场拍摄排一起(60 秒内视为同场)")
+        self.group_cb = QCheckBox(tr("filter.group_by_time"))
+        self.group_cb.setToolTip(tr("filter.group_by_time_tip"))
 
         lay = QHBoxLayout(self)
         lay.setContentsMargins(10, 6, 10, 6)
         lay.setSpacing(6)
-        lay.addWidget(QLabel("分数:"))
+        lay.addWidget(QLabel(tr("filter.score")))
         lay.addWidget(self.min_spin)
         lay.addWidget(QLabel("–"))
         lay.addWidget(self.max_spin)
         lay.addSpacing(12)
-        lay.addWidget(QLabel("场景:"))
+        lay.addWidget(QLabel(tr("filter.scene")))
         lay.addWidget(self.scene_combo)
         lay.addSpacing(8)
-        lay.addWidget(QLabel("人物:"))
+        lay.addWidget(QLabel(tr("filter.person")))
         lay.addWidget(self.has_person_combo)
         lay.addSpacing(12)
-        lay.addWidget(QLabel("排序:"))
+        lay.addWidget(QLabel(tr("filter.sort")))
         lay.addWidget(self.sort_combo)
         lay.addSpacing(12)
         lay.addWidget(self.group_cb)
@@ -141,12 +155,11 @@ class FilterBar(QWidget):
         """'' 表示不限。"""
         if self.scene_combo.currentIndex() == 0:
             return ""
-        return self.scene_combo.currentText()
+        return self.scene_combo.currentData() or ""
 
     def has_person_filter(self) -> str:
         """'' / '是' / '否'"""
-        idx = self.has_person_combo.currentIndex()
-        return "" if idx == 0 else ("是" if idx == 1 else "否")
+        return self.has_person_combo.currentData() or ""
 
     def sort_key(self) -> tuple[str, bool]:
         """返回 (column_name, ascending)"""
@@ -155,4 +168,4 @@ class FilterBar(QWidget):
         return col, asc
 
     def update_count(self, shown: int, total: int):
-        self.count_label.setText(f"{shown} / {total} 张")
+        self.count_label.setText(tr("filter.count", shown=shown, total=total))

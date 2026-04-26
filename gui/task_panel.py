@@ -189,24 +189,27 @@ class TaskPanel(QWidget):
     def _on_start(self):
         if not self.folder or not self.folder.is_dir():
             return
-        profile_name = self.profile_combo.currentText() or DEFAULT_PROFILE_NAME
+        profile_name = self.profile_combo.currentData() or self.profile_combo.currentText() or DEFAULT_PROFILE_NAME
         self.start_requested.emit(
             self.folder, self.conc_spin.value(),
             self.meta_cb.isChecked(), profile_name)
 
     def _refresh_profile_combo(self):
-        current = self.profile_combo.currentText() if self.profile_combo.count() else ""
+        current = self.profile_combo.currentData() if self.profile_combo.count() else ""
         # 首次调用才连一次持久化
         if self.profile_combo.count() == 0:
-            self.profile_combo.currentTextChanged.connect(
-                lambda v: app_settings().setValue("task/prompt_profile", v))
+            self.profile_combo.currentIndexChanged.connect(
+                lambda _idx: app_settings().setValue(
+                    "task/prompt_profile", self.profile_combo.currentData() or DEFAULT_PROFILE_NAME))
         self.profile_combo.blockSignals(True)
         self.profile_combo.clear()
         names = self.prompt_store.list_names()
-        self.profile_combo.addItems(names)
+        for name in names:
+            display = tr("prompt.default") if name == DEFAULT_PROFILE_NAME else name
+            self.profile_combo.addItem(display, name)
         saved = app_settings().value("task/prompt_profile", DEFAULT_PROFILE_NAME)
         target = current if current in names else (saved if saved in names else DEFAULT_PROFILE_NAME)
-        idx = self.profile_combo.findText(target)
+        idx = self.profile_combo.findData(target)
         if idx >= 0:
             self.profile_combo.setCurrentIndex(idx)
         self.profile_combo.blockSignals(False)

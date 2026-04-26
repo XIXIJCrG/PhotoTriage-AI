@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from core.i18n import tr
+
 from .utils import fmt_duration
 
 
@@ -38,7 +40,7 @@ class ProgressPanel(QWidget):
         self.eta_label.setStyleSheet("color: #666;")
 
         top = QHBoxLayout()
-        top.addWidget(QLabel("进度:"))
+        top.addWidget(QLabel(tr("progress.label")))
         top.addWidget(self.bar, 1)
         top.addSpacing(8)
         top.addWidget(self.eta_label)
@@ -72,7 +74,7 @@ class ProgressPanel(QWidget):
         self._start_time = time.monotonic()
         self.bar.setMaximum(max(1, total))
         self.bar.setValue(0)
-        self.eta_label.setText("计算中…")
+        self.eta_label.setText(tr("progress.calculating"))
 
     def append_log(self, msg: str):
         self.log.append(msg)

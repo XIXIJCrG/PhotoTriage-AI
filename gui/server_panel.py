@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from core.providers import LOCAL_PROVIDER, is_local_provider
+from core.i18n import tr
 
 from triage import API_URL, DEFAULT_BASE_URL, DEFAULT_MODEL, check_server
 
@@ -114,7 +115,7 @@ class ServerPanel(QWidget):
 
     def _build_ui(self):
         self.light = StatusLight()
-        self.status_label = QLabel("未启动")
+        self.status_label = QLabel(tr("server.stopped"))
         self.status_label.setMinimumWidth(80)
 
         self.model_label = QLabel("")
@@ -124,12 +125,12 @@ class ServerPanel(QWidget):
         # 防止长错误信息撑大窗口:超出省略
         self.model_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
-        self.start_btn = QPushButton("启动服务")
-        self.stop_btn = QPushButton("停止服务")
+        self.start_btn = QPushButton(tr("server.start"))
+        self.stop_btn = QPushButton(tr("server.stop"))
         self.stop_btn.setEnabled(False)
 
         self.script_btn = QPushButton("…")
-        self.script_btn.setToolTip("选择 start-triage-server.bat 路径")
+        self.script_btn.setToolTip(tr("server.pick_script"))
         self.script_btn.setFixedWidth(32)
 
         self.start_btn.clicked.connect(self._on_start)
@@ -163,27 +164,27 @@ class ServerPanel(QWidget):
         current = self._script_path()
         start_dir = str(current.parent) if current else ""
         path, _ = QFileDialog.getOpenFileName(
-            self, "选择 llama-server 启动脚本", start_dir,
-            "批处理脚本 (*.bat *.cmd);;所有文件 (*.*)",
+            self, tr("dialog.pick_llama_script"), start_dir,
+            tr("dialog.batch_scripts"),
         )
         if path:
             app_settings().setValue("server/script_path", path)
-            QMessageBox.information(self, "已保存",
-                                    f"启动脚本已设置为:\n{path}")
+            QMessageBox.information(self, tr("server.script_saved"),
+                                    tr("server.script_saved_body", path=path))
 
     # ---------- 启/停 ----------
 
     def _on_start(self):
         if not is_local_provider(app_settings().value("provider/type", LOCAL_PROVIDER)):
-            QMessageBox.information(self, "Cloud API", "当前使用云端 API,无需启动本地服务。")
+            QMessageBox.information(self, "Cloud API", tr("server.cloud_no_start"))
             return
         if self.proc and self.proc.poll() is None:
             return
         script = self._script_path()
         if not script:
             QMessageBox.warning(
-                self, "未找到启动脚本",
-                "请先通过右侧 … 按钮选择 start-triage-server.bat 的路径。")
+                self, tr("server.script_missing"),
+                tr("server.script_missing_body"))
             return
         try:
             self.proc = subprocess.Popen(
@@ -193,7 +194,7 @@ class ServerPanel(QWidget):
                 shell=False,
             )
         except Exception as e:  # noqa: BLE001
-            QMessageBox.critical(self, "启动失败", str(e))
+            QMessageBox.critical(self, tr("server.start_failed"), str(e))
             return
         self._set_state("starting")
         self.start_btn.setEnabled(False)
@@ -239,10 +240,10 @@ class ServerPanel(QWidget):
         self.state = state
         self.light.set_state(state)
         text_map = {
-            "stopped": "未启动",
-            "starting": "启动中…",
-            "running": "运行中",
-            "dead": "已停止",
+            "stopped": tr("server.stopped"),
+            "starting": tr("server.starting"),
+            "running": tr("server.running"),
+            "dead": tr("server.dead"),
         }
         self.status_label.setText(text_map.get(state, state))
         self.status_changed.emit(state)
@@ -270,7 +271,7 @@ class ServerPanel(QWidget):
         api_url = app_settings().value("server/api_url", API_URL) or API_URL
         if not is_local_provider(provider_type):
             self.start_btn.setEnabled(False)
-            self.start_btn.setToolTip("当前使用云端 API,无需启动本地服务")
+            self.start_btn.setToolTip(tr("server.cloud_no_start"))
             self.stop_btn.setEnabled(False)
         elif self.proc is None and self.state != "running":
             self.start_btn.setEnabled(True)
@@ -289,17 +290,17 @@ class ServerPanel(QWidget):
         if ok:
             self.model_name = info
             msg = info if len(info) <= 60 else info[:57] + "…"
-            self.model_label.setText(f"模型: {msg}")
-            self.model_label.setToolTip(f"模型: {info}")
+            self.model_label.setText(tr("server.model", model=msg))
+            self.model_label.setToolTip(tr("server.model", model=info))
             if self.state != "running":
                 self._set_state("running")
             # 按钮状态跟随是否有自己启动的进程
             if self.proc is None:
                 # 外部启动的服务
                 self.start_btn.setEnabled(False)
-                self.start_btn.setToolTip("服务器已在外部运行")
+                self.start_btn.setToolTip(tr("server.external_running"))
                 self.stop_btn.setEnabled(False)
-                self.stop_btn.setToolTip("服务器由外部启动,无法从此处停止")
+                self.stop_btn.setToolTip(tr("server.external_stop_disabled"))
             else:
                 self.start_btn.setEnabled(False)
                 self.start_btn.setToolTip("")
@@ -308,8 +309,8 @@ class ServerPanel(QWidget):
         else:
             # 错误信息可能很长,截断避免撑大窗口
             msg = info if len(info) <= 60 else info[:57] + "…"
-            self.model_label.setText(f"ping 失败: {msg}")
-            self.model_label.setToolTip(f"ping 失败: {info}")
+            self.model_label.setText(tr("server.ping_failed", message=msg))
+            self.model_label.setToolTip(tr("server.ping_failed", message=info))
             if self.state == "running":
                 # 服务器从 running 变不可达
                 if self.proc is not None and self.proc.poll() is None:

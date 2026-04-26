@@ -24,6 +24,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from core.i18n import tr
+
 
 DISCARD_SUBDIR = "_废片"
 
@@ -206,27 +208,27 @@ class BatchActionsBar(QWidget):
         self.count_label = QLabel("")
         self.count_label.setStyleSheet("color: #555;")
 
-        self.discard_btn = QPushButton("淘汰选中")
-        self.discard_btn.setToolTip("把选中的照片连同 RAF/XMP 移到 _废片/ 子目录(可撤销)")
+        self.discard_btn = QPushButton(tr("batch.discard"))
+        self.discard_btn.setToolTip(tr("batch.discard_tip"))
         self.discard_btn.setStyleSheet(
             "QPushButton { padding: 4px 12px; }"
             "QPushButton:enabled { color: #B71C1C; }"
         )
 
-        self.export_btn = QPushButton("导出选中…")
-        self.export_btn.setToolTip("把选中的照片(连同 RAF)复制到指定目录")
+        self.export_btn = QPushButton(tr("batch.export"))
+        self.export_btn.setToolTip(tr("batch.export_tip"))
 
-        self.compare_btn = QPushButton("对比")
-        self.compare_btn.setToolTip("选中 2-4 张,并排大图对比")
+        self.compare_btn = QPushButton(tr("batch.compare"))
+        self.compare_btn.setToolTip(tr("batch.compare_tip"))
 
-        self.undo_btn = QPushButton("撤销上次淘汰")
-        self.undo_btn.setToolTip("把 _废片/ 里最近一次移动的文件还原回原位置")
+        self.undo_btn = QPushButton(tr("batch.undo"))
+        self.undo_btn.setToolTip(tr("batch.undo_tip"))
 
-        self.open_csv_btn = QPushButton("打开 CSV")
-        self.open_csv_btn.setToolTip("用系统默认程序(通常是 Excel)打开本目录最新的 triage CSV")
+        self.open_csv_btn = QPushButton(tr("batch.open_csv"))
+        self.open_csv_btn.setToolTip(tr("batch.open_csv_tip"))
 
-        self.explorer_btn = QPushButton("资源管理器")
-        self.explorer_btn.setToolTip("在资源管理器中打开当前目录")
+        self.explorer_btn = QPushButton(tr("batch.explorer"))
+        self.explorer_btn.setToolTip(tr("batch.explorer_tip"))
 
         self.discard_btn.clicked.connect(self.discard_requested)
         self.export_btn.clicked.connect(self.export_requested)
@@ -251,19 +253,19 @@ class BatchActionsBar(QWidget):
 
     def set_selection_count(self, n: int):
         if n == 0:
-            self.count_label.setText("未选中")
+            self.count_label.setText(tr("batch.none_selected"))
             self.discard_btn.setEnabled(False)
             self.export_btn.setEnabled(False)
             self.compare_btn.setEnabled(False)
         else:
-            self.count_label.setText(f"已选中 {n} 张")
+            self.count_label.setText(tr("batch.selected", count=n))
             self.discard_btn.setEnabled(True)
             self.export_btn.setEnabled(True)
             self.compare_btn.setEnabled(2 <= n <= 4)
             if n > 4:
-                self.compare_btn.setToolTip("对比最多支持 4 张")
+                self.compare_btn.setToolTip(tr("batch.compare_max_tip"))
             else:
-                self.compare_btn.setToolTip("选中 2-4 张,并排大图对比")
+                self.compare_btn.setToolTip(tr("batch.compare_tip"))
 
     def set_undo_available(self, ok: bool):
         self.undo_btn.setEnabled(ok)

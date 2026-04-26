@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
@@ -18,6 +19,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from core.i18n import tr
 
 from .prompt_manager import DEFAULT_PROFILE_NAME, PromptStore
 from .styles import mark_danger, mark_primary
@@ -28,7 +31,7 @@ class PromptEditorDialog(QDialog):
 
     def __init__(self, store: PromptStore, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Prompt 编辑器")
+        self.setWindowTitle(tr("prompt_editor.title"))
         self.resize(1000, 720)
         self.store = store
         self._build_ui()
@@ -40,12 +43,13 @@ class PromptEditorDialog(QDialog):
         left_lay = QVBoxLayout(left)
         left_lay.setContentsMargins(0, 0, 0, 0)
         self.list = QListWidget()
-        self.list.currentTextChanged.connect(self._on_select)
+        self.list.currentItemChanged.connect(lambda item, _prev: self._on_select(
+            item.data(Qt.UserRole) if item else ""))
 
         btn_row = QHBoxLayout()
-        self.new_btn = QPushButton("新建")
-        self.dup_btn = QPushButton("复制")
-        self.del_btn = QPushButton("删除")
+        self.new_btn = QPushButton(tr("prompt_editor.new"))
+        self.dup_btn = QPushButton(tr("prompt_editor.duplicate"))
+        self.del_btn = QPushButton(tr("prompt_editor.delete"))
         mark_danger(self.del_btn)
         self.new_btn.clicked.connect(self._new_profile)
         self.dup_btn.clicked.connect(self._dup_profile)
@@ -75,13 +79,11 @@ class PromptEditorDialog(QDialog):
             " border: 1px solid #E0E3E8; padding: 6px; }")
         self.editor.setTabChangesFocus(False)
 
-        self.hint = QLabel(
-            "提示:模型输出是严格 JSON 结构(content / technical / aesthetic / portrait / overall),"
-            "改动 prompt 时请保留这些字段名,否则 CSV 和 XMP 会解析失败。")
+        self.hint = QLabel(tr("prompt_editor.hint"))
         self.hint.setWordWrap(True)
         self.hint.setStyleSheet("color: #8A919C; font-size: 12px;")
 
-        self.save_btn = QPushButton("保存")
+        self.save_btn = QPushButton(tr("prompt_editor.save"))
         mark_primary(self.save_btn)
         self.save_btn.clicked.connect(self._save_current)
 
@@ -113,12 +115,17 @@ class PromptEditorDialog(QDialog):
         self.list.clear()
         names = self.store.list_names()
         for n in names:
-            self.list.addItem(n)
+            display = tr("prompt.default") if n == DEFAULT_PROFILE_NAME else n
+            item = QListWidgetItem(display)
+            item.setData(Qt.UserRole, n)
+            self.list.addItem(item)
         target = select if select in names else (names[0] if names else "")
         if target:
-            items = self.list.findItems(target, Qt.MatchExactly)
-            if items:
-                self.list.setCurrentItem(items[0])
+            for i in range(self.list.count()):
+                item = self.list.item(i)
+                if item.data(Qt.UserRole) == target:
+                    self.list.setCurrentItem(item)
+                    break
         self.list.blockSignals(False)
         self._on_select(target)
 
@@ -132,7 +139,7 @@ class PromptEditorDialog(QDialog):
         profile = self.store.get(name)
         if profile is None:
             return
-        self.name_label.setText(name + ("  (默认,只读)" if name == DEFAULT_PROFILE_NAME else ""))
+        self.name_label.setText(name + (tr("prompt_editor.default_readonly") if name == DEFAULT_PROFILE_NAME else ""))
         self.editor.setPlainText(profile.prompt)
         is_default = (name == DEFAULT_PROFILE_NAME)
         self.editor.setReadOnly(is_default)
@@ -142,15 +149,15 @@ class PromptEditorDialog(QDialog):
     # ---------- 操作 ----------
     def _new_profile(self):
         name, ok = QInputDialog.getText(
-            self, "新建 profile", "Profile 名称:")
+            self, tr("prompt_editor.new_title"), tr("prompt_editor.name_label"))
         if not ok or not name.strip():
             return
         name = name.strip()
         if name == DEFAULT_PROFILE_NAME:
-            QMessageBox.warning(self, "名称冲突", "不能用「默认」这个名字。")
+            QMessageBox.warning(self, tr("prompt_editor.name_conflict"), tr("prompt_editor.default_name_forbidden"))
             return
         if self.store.get(name) is not None:
-            QMessageBox.warning(self, "名称冲突", f"已存在名为「{name}」的 profile。")
+            QMessageBox.warning(self, tr("prompt_editor.name_conflict"), tr("prompt_editor.name_exists"))
             return
         default_prompt = self.store.get(DEFAULT_PROFILE_NAME).prompt
         self.store.upsert(name, default_prompt)
@@ -160,17 +167,18 @@ class PromptEditorDialog(QDialog):
         cur = self.list.currentItem()
         if cur is None:
             return
-        src_name = cur.text()
+        src_name = cur.data(Qt.UserRole) or cur.text()
         base = self.store.get(src_name)
         if base is None:
             return
         new_name, ok = QInputDialog.getText(
-            self, "复制 profile", "新名称:", text=f"{src_name} 副本")
+            self, tr("prompt_editor.copy_title"), tr("prompt_editor.new_name_label"),
+            text=f"{src_name}{tr('prompt_editor.copy_suffix')}")
         if not ok or not new_name.strip():
             return
         new_name = new_name.strip()
         if new_name == DEFAULT_PROFILE_NAME or self.store.get(new_name):
-            QMessageBox.warning(self, "名称冲突", "该名称已存在。")
+            QMessageBox.warning(self, tr("prompt_editor.name_conflict"), tr("prompt_editor.name_exists"))
             return
         self.store.upsert(new_name, base.prompt)
         self._refresh_list(select=new_name)
@@ -179,12 +187,12 @@ class PromptEditorDialog(QDialog):
         cur = self.list.currentItem()
         if cur is None:
             return
-        name = cur.text()
+        name = cur.data(Qt.UserRole) or cur.text()
         if name == DEFAULT_PROFILE_NAME:
             return
         reply = QMessageBox.question(
-            self, "删除确认",
-            f"确定删除 profile 「{name}」?",
+            self, tr("prompt_editor.delete_confirm"),
+            tr("prompt_editor.delete_confirm_body", name=name),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return
@@ -195,8 +203,8 @@ class PromptEditorDialog(QDialog):
         cur = self.list.currentItem()
         if cur is None:
             return
-        name = cur.text()
+        name = cur.data(Qt.UserRole) or cur.text()
         if name == DEFAULT_PROFILE_NAME:
             return
         self.store.upsert(name, self.editor.toPlainText())
-        QMessageBox.information(self, "已保存", f"已保存 profile 「{name}」。")
+        QMessageBox.information(self, tr("prompt_editor.saved"), tr("prompt_editor.saved_body", name=name))

@@ -8,3 +8,4 @@
 - Added folder selection with photo thumbnail previews.
 - Added thumbnail previews before analysis.
 - Added GitHub Actions unit test workflow.
+- Expanded English GUI localization across service, filter, batch action, card, stats, progress, and prompt editor controls.

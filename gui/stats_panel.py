@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from core.i18n import tr
+
 
 class _Stat(QWidget):
     """一张小卡片:数值 + 标签。"""
@@ -58,11 +60,11 @@ class StatsPanel(QWidget):
         lay.setSpacing(10)
 
         # 第一行:摘要卡片
-        self.card_total = _Stat("总数")
-        self.card_avg = _Stat("平均分", color="#1565C0")
-        self.card_pick = _Stat("精选(≥7)", color="#2E7D32")
-        self.card_waste = _Stat("废片(≤4)", color="#C62828")
-        self.card_port = _Stat("人像占比", color="#6A1B9A")
+        self.card_total = _Stat(tr("stats.total"))
+        self.card_avg = _Stat(tr("stats.average"), color="#1565C0")
+        self.card_pick = _Stat(tr("stats.picks"), color="#2E7D32")
+        self.card_waste = _Stat(tr("stats.discards"), color="#C62828")
+        self.card_port = _Stat(tr("stats.portrait_ratio"), color="#6A1B9A")
         row = QGridLayout()
         row.setSpacing(8)
         row.addWidget(self.card_total, 0, 0)
@@ -139,7 +141,7 @@ class StatsPanel(QWidget):
             key = str(min(10, max(1, int(round(s)))))
             buckets[key] += 1
 
-        chart = self._reset_chart(self.hist_view, "综合分分布")
+        chart = self._reset_chart(self.hist_view, tr("stats.score_distribution"))
         chart.legend().setVisible(False)
 
         bar_set = QBarSet("")
@@ -166,7 +168,7 @@ class StatsPanel(QWidget):
 
     def _draw_scene_pie(self, rows: list[dict]):
         c = Counter(r.get("场景", "") for r in rows if r.get("场景"))
-        chart = self._reset_chart(self.pie_view, "场景分布")
+        chart = self._reset_chart(self.pie_view, tr("stats.scene_distribution"))
         chart.legend().setVisible(True)
         chart.legend().setAlignment(Qt.AlignRight)
 

@@ -6,6 +6,8 @@ from PySide6.QtCore import QRect, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QStyle, QStyledItemDelegate, QStyleOptionViewItem
 
+from core.i18n import tr
+
 from .utils import score_to_stars
 
 
@@ -25,6 +27,54 @@ GROUP_PALETTE = [
     "#2563EB", "#059669", "#7C3AED", "#EA580C",
     "#0F766E", "#DC2626", "#6D4C41", "#475569",
 ]
+
+SCENE_LABELS = {
+    "人像": "scene.portrait",
+    "街拍": "scene.street",
+    "风光": "scene.landscape",
+    "建筑": "scene.architecture",
+    "静物": "scene.still_life",
+    "动物": "scene.animal",
+    "夜景": "scene.night",
+    "微距": "scene.macro",
+    "美食": "scene.food",
+    "活动": "scene.event",
+    "其他": "scene.other",
+    "portrait": "scene.portrait",
+    "street": "scene.street",
+    "landscape": "scene.landscape",
+    "architecture": "scene.architecture",
+    "still_life": "scene.still_life",
+    "animal": "scene.animal",
+    "night": "scene.night",
+    "macro": "scene.macro",
+    "food": "scene.food",
+    "event": "scene.event",
+    "other": "scene.other",
+}
+
+INTENT_LABELS = {
+    "抓拍": "intent.candid",
+    "摆拍": "intent.posed",
+    "棚拍": "intent.studio",
+    "纪实": "intent.documentary",
+    "随手": "intent.casual",
+    "艺术创作": "intent.artistic",
+    "candid": "intent.candid",
+    "posed": "intent.posed",
+    "studio": "intent.studio",
+    "documentary": "intent.documentary",
+    "casual": "intent.casual",
+    "artistic": "intent.artistic",
+    "editorial": "intent.editorial",
+    "unknown": "intent.unknown",
+}
+
+
+def _localized_value(value: str, mapping: dict[str, str]) -> str:
+    text = str(value or "").strip()
+    key = mapping.get(text)
+    return tr(key) if key else text
 
 
 def _score_color(score) -> QColor:
@@ -93,7 +143,7 @@ class PhotoCardDelegate(QStyledItemDelegate):
             painter.drawPixmap(x, y, scaled)
         else:
             painter.setPen(QColor("#94A3B8"))
-            painter.drawText(image_rect, Qt.AlignCenter, "加载缩略图…")
+            painter.drawText(image_rect, Qt.AlignCenter, tr("card.loading_thumb"))
 
         row = index.data(ROLE_ROW) or {}
         score = row.get("综合评分", "")
@@ -113,7 +163,7 @@ class PhotoCardDelegate(QStyledItemDelegate):
             score_text = f"{score_to_stars(score)}  {score}"
             painter.setPen(_score_color(score))
         else:
-            score_text = "未分析"
+            score_text = tr("card.unanalyzed")
             painter.setPen(QColor("#64748B"))
         score_font = QFont(option.font)
         score_font.setBold(True)
@@ -121,7 +171,9 @@ class PhotoCardDelegate(QStyledItemDelegate):
         painter.setFont(score_font)
         painter.drawText(QRect(text_x, y, text_w, 22), Qt.AlignLeft | Qt.AlignVCenter, score_text)
 
-        pill_text = scene or ("RAW 配对" if row.get("有RAW") == "是" else "照片")
+        pill_text = _localized_value(scene, SCENE_LABELS)
+        if not pill_text:
+            pill_text = tr("card.raw_pair") if row.get("有RAW") == "是" else tr("card.photo")
         pill_w = min(82, max(48, fm.horizontalAdvance(pill_text) + 18))
         pill_rect = QRect(int(outer.right() - pill_w - 12), y + 1, pill_w, 20)
         painter.setPen(Qt.NoPen)
@@ -142,8 +194,8 @@ class PhotoCardDelegate(QStyledItemDelegate):
 
         y += 21
         painter.setPen(QColor("#64748B"))
-        meta = row.get("拍摄意图", "") if analysed else row.get("RAW文件名", "")
-        meta = meta or ("可双击预览原图" if not analysed else "")
+        meta = _localized_value(row.get("拍摄意图", ""), INTENT_LABELS) if analysed else row.get("RAW文件名", "")
+        meta = meta or (tr("card.double_click") if not analysed else "")
         painter.drawText(
             QRect(text_x, y, text_w, 18),
             Qt.AlignLeft | Qt.AlignVCenter,
