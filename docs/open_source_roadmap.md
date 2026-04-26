@@ -22,7 +22,7 @@
 - PyInstaller Windows build
 - Portable ZIP release
 - [x] GitHub Actions test workflow
-- [ ] README screenshots and release assets
+- [x] README screenshots and release assets
 
 ## Later
 

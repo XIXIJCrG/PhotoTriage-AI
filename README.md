@@ -1,5 +1,10 @@
 # PhotoTriage AI
 
+[![Tests](https://github.com/pqzmwoxn6543210-cpu/PhotoTriage-AI/actions/workflows/tests.yml/badge.svg)](https://github.com/pqzmwoxn6543210-cpu/PhotoTriage-AI/actions/workflows/tests.yml)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 AI-assisted photo culling for photographers who shoot too much and still want to make the final call themselves.
 
 PhotoTriage AI is a desktop tool for reviewing JPG/PNG + RAW shoots with a vision-language model. It previews folders before analysis, scores each image, writes structured CSV output, and can optionally write Lightroom/Capture One friendly XMP metadata.
@@ -7,6 +12,8 @@ PhotoTriage AI is a desktop tool for reviewing JPG/PNG + RAW shoots with a visio
 The goal is simple: make the first pass faster without turning photo selection into a black box.
 
 > Status: early desktop prototype. Tested primarily on Windows with local and cloud OpenAI-compatible vision endpoints.
+
+![PhotoTriage AI product preview](docs/screenshots/github-hero.png)
 
 ## What It Does
 
@@ -31,15 +38,17 @@ Lightroom can organize and rate photos, but it does not understand what is in th
 
 It does not replace taste. It gives your taste less repetitive work to fight through.
 
-## Screenshots
+## Preview
 
-Screenshots are not included yet because the UI is still moving quickly. The current interface includes:
+The current app is still evolving, but the core workflow is already in place:
 
 - a folder picker with live thumbnail preview
 - a thumbnail grid for analysed and unanalysed photos
 - a folder navigator for recent/current directories
 - a settings panel for local and cloud model providers
 - progress, statistics, and CSV/XMP workflow panels
+
+![PhotoTriage AI workflow](docs/screenshots/workflow.png)
 
 ## Privacy Model
 
@@ -81,6 +90,8 @@ In Settings -> Server, configure:
 - API key, if required
 
 For local `llama.cpp`, copy [start-triage-server.example.bat](start-triage-server.example.bat) to `start-triage-server.bat`, edit the paths, and select it in Settings. The real `start-triage-server.bat` is ignored so personal model paths do not enter the repository.
+
+![PhotoTriage AI provider settings concept](docs/screenshots/providers.png)
 
 ## Quick Start
 
