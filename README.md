@@ -1,39 +1,86 @@
 # PhotoTriage AI
 
-Local-first AI photo triage for JPG+RAW shoots.
+AI-assisted photo culling for photographers who shoot too much and still want to make the final call themselves.
 
-PhotoTriage AI uses a vision-language model to review, score, annotate, and export photo shoots. It is designed for photographers who want fast first-pass culling while keeping Lightroom/Capture One compatible metadata through CSV and XMP workflows.
+PhotoTriage AI is a desktop tool for reviewing JPG/PNG + RAW shoots with a vision-language model. It previews folders before analysis, scores each image, writes structured CSV output, and can optionally write Lightroom/Capture One friendly XMP metadata.
 
-> Status: early desktop prototype. The current version is tested on Windows with local and cloud OpenAI-compatible vision endpoints.
+The goal is simple: make the first pass faster without turning photo selection into a black box.
 
-## Highlights
+> Status: early desktop prototype. Tested primarily on Windows with local and cloud OpenAI-compatible vision endpoints.
 
-- Folder picker with thumbnail preview before analysis
-- Thumbnail grid for both analysed and unanalysed folders
-- Vision-model scoring for technical quality, aesthetics, subject clarity, story, and portrait-specific factors
-- CSV export with structured fields
-- XMP metadata writing, including safer sidecar-only mode
-- JPG/PNG + RAW pairing
-- Lightroom/Capture One friendly workflow
-- Prompt profiles for different judging styles
-- Local-first design, with optional cloud provider support
-- Simplified Chinese and English UI infrastructure in progress
+## What It Does
+
+PhotoTriage AI helps you move from a folder full of images to a cleaner, more searchable first-pass selection.
+
+- Browse folders with thumbnail previews before committing to analysis
+- Preview thumbnails even before model analysis has run
+- Pair JPG/PNG files with matching RAW files by filename
+- Send resized previews to a local or cloud OpenAI-compatible vision model
+- Score technical quality, composition, lighting, color, subject clarity, story, and portrait-specific details
+- Export structured CSV results for review, filtering, or external tools
+- Write XMP metadata, including a safer sidecar-only mode
+- Filter, sort, compare, export, discard, and undo from the GUI
+- Use custom prompt profiles for different judging styles
+- Switch between Simplified Chinese and English UI infrastructure
 
 ## Why This Exists
 
-Photo culling is repetitive. Lightroom can rate photos, but it does not understand them. This tool lets a local multimodal model act as a first-pass reviewer: it reads the image, gives structured scores, writes comments, and helps you quickly filter keepers from a large shoot.
+Culling is one of the least glamorous parts of photography. A shoot may contain hundreds or thousands of near-duplicates, test frames, missed expressions, soft focus, odd gestures, and a few genuinely good moments hiding in the pile.
 
-It is not meant to replace final human selection. It is meant to remove friction from the first pass.
+Lightroom can organize and rate photos, but it does not understand what is in them. PhotoTriage AI lets a vision model act as a first-pass assistant: it looks at the image, gives a structured opinion, explains strengths and weaknesses, and leaves you with a more useful starting point.
 
-## Privacy
+It does not replace taste. It gives your taste less repetitive work to fight through.
 
-The default goal is local processing:
+## Screenshots
 
-- In local mode, resized images are sent only to your configured local endpoint.
-- XMP sidecar mode can avoid modifying original JPG/PNG files.
-- Generated CSV/XMP files may contain private shoot information and are ignored by default.
+Screenshots are not included yet because the UI is still moving quickly. The current interface includes:
 
-Cloud API support is explicit and opt-in. See [docs/privacy.md](docs/privacy.md).
+- a folder picker with live thumbnail preview
+- a thumbnail grid for analysed and unanalysed photos
+- a folder navigator for recent/current directories
+- a settings panel for local and cloud model providers
+- progress, statistics, and CSV/XMP workflow panels
+
+## Privacy Model
+
+PhotoTriage AI is designed to make privacy choices explicit.
+
+Local mode:
+
+- Images are resized on your computer.
+- Resized image data is sent only to your configured local endpoint, such as `llama.cpp` server.
+- Your original photos remain on disk.
+
+Cloud mode:
+
+- Cloud providers are opt-in.
+- Resized image data is sent to the configured API provider.
+- The app shows a privacy warning before the first cloud run.
+- API keys are stored only in local desktop settings and should never be committed.
+
+Generated CSV/XMP output may contain private shoot information, so common output files are ignored by default. See [docs/privacy.md](docs/privacy.md) and [SECURITY.md](SECURITY.md).
+
+## Model Providers
+
+The analysis core uses an OpenAI-compatible chat completions API:
+
+```text
+/v1/chat/completions
+```
+
+Supported provider modes:
+
+- Local `llama.cpp` or another local OpenAI-compatible vision endpoint
+- Cloud OpenAI-compatible vision APIs
+
+In Settings -> Server, configure:
+
+- Provider type
+- Base URL, for example `http://127.0.0.1:8080/v1` or `https://api.example.com/v1`
+- Model name
+- API key, if required
+
+For local `llama.cpp`, copy [start-triage-server.example.bat](start-triage-server.example.bat) to `start-triage-server.bat`, edit the paths, and select it in Settings. The real `start-triage-server.bat` is ignored so personal model paths do not enter the repository.
 
 ## Quick Start
 
@@ -49,33 +96,42 @@ Start the GUI:
 python app.py
 ```
 
-For local analysis, run an OpenAI-compatible vision endpoint such as `llama.cpp` server, then configure the Base URL and model in the app settings.
+Basic workflow:
 
-If you want the GUI to start a local `llama.cpp` server for you, copy `start-triage-server.example.bat` to `start-triage-server.bat`, edit the paths, and select it in Settings. The real `start-triage-server.bat` is ignored so personal model paths are not committed.
+1. Configure a local or cloud OpenAI-compatible vision model in Settings.
+2. Choose a photo folder with the folder picker.
+3. Preview thumbnails to confirm it is the right shoot.
+4. Start analysis.
+5. Review scores, comments, filters, and thumbnails.
+6. Export, discard, undo, or write XMP metadata as needed.
 
-For cloud analysis, open Settings -> Server and choose "OpenAI Compatible API". Enter:
+## Metadata Workflow
 
-- Base URL, for example `https://api.openai.com/v1`
-- Model name, for example a vision-capable chat model offered by your provider
-- API Key
+PhotoTriage AI can write model-generated review data into metadata:
 
-Photos are resized before upload, but cloud mode still sends image data to the configured provider. Use local mode for private shoots.
+- CSV: structured analysis rows for every processed image
+- XMP sidecar: safer mode that avoids modifying JPG/PNG files
+- Embedded XMP: writes metadata into JPG/PNG and sidecars for RAW files
 
-## Model Providers
+Sidecar mode is recommended when testing the app on important shoots.
 
-The analysis core talks to an OpenAI-compatible chat completions endpoint:
+## Internationalization
 
-```text
-/v1/chat/completions
-```
+The UI has a lightweight JSON-based translation system.
 
-Local `llama.cpp` and cloud OpenAI-compatible providers share the same request format. The provider settings are stored locally through the desktop app settings.
+Current language catalogs:
+
+- Simplified Chinese: [i18n/zh-CN.json](i18n/zh-CN.json)
+- English: [i18n/en-US.json](i18n/en-US.json)
+
+More languages can be added by creating another JSON catalog with the same keys.
 
 ## Project Structure
 
 ```text
 app.py                         GUI entry point
-triage.py                      Core folder scan, model call, CSV/XMP workflow
+triage.py                      Core scan, model call, CSV/XMP workflow
+core/                          Shared helpers such as i18n and providers
 gui/                           PySide6 desktop UI
   main_window.py               Main frame and menus
   task_panel.py                Folder/run controls
@@ -83,10 +139,9 @@ gui/                           PySide6 desktop UI
   results_view.py              Thumbnail grid, filtering, batch actions
   thumbnail_gen.py             Background thumbnail cache
   settings_dialog.py           Settings UI
-tests/                         Unit tests
-docs/                          Open-source docs
 i18n/                          Translation dictionaries
-core/                          Shared non-GUI helpers
+tests/                         Unit tests
+docs/                          Architecture, privacy, and roadmap docs
 ```
 
 ## Development
@@ -97,8 +152,6 @@ Run tests:
 python -m unittest discover -s tests -v
 ```
 
-See [CHANGELOG.md](CHANGELOG.md) for notable changes and [SECURITY.md](SECURITY.md) for privacy/security reporting guidance.
-
 Run a lightweight GUI smoke test:
 
 ```powershell
@@ -106,23 +159,46 @@ $env:QT_QPA_PLATFORM='offscreen'
 python - <<'PY'
 from PySide6.QtWidgets import QApplication
 from gui.main_window import MainWindow
+
 app = QApplication([])
 win = MainWindow()
 print(win.windowTitle())
 PY
 ```
 
-## Roadmap
+Useful docs:
 
-See [docs/open_source_roadmap.md](docs/open_source_roadmap.md).
+- [Architecture](docs/architecture.md)
+- [Privacy](docs/privacy.md)
+- [Open-source roadmap](docs/open_source_roadmap.md)
+- [Development plan](docs/development_plan.md)
+- [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
+
+## Roadmap
 
 Near-term priorities:
 
-- Finish English/Simplified Chinese UI switch
-- Add provider abstraction
-- Support local and cloud OpenAI-compatible APIs cleanly
-- Add first-run setup wizard
-- Package Windows portable builds
+- Improve first-run setup for local and cloud providers
+- Finish full translation coverage across every dialog
+- Add README screenshots and release assets
+- Package portable Windows builds
+- Add provider presets for common services
+- Improve RAW embedded-preview extraction
+
+See [docs/open_source_roadmap.md](docs/open_source_roadmap.md) for more detail.
+
+## Who This Is For
+
+PhotoTriage AI is for photographers who:
+
+- shoot JPG+RAW or JPG/PNG batches
+- want a faster first pass before detailed editing
+- prefer local-first tooling but want optional cloud models
+- use Lightroom, Capture One, Bridge, or metadata-aware workflows
+- want model feedback that is visible, editable, and exportable
+
+It is probably not the right tool if you want a fully automatic final selector. The best use is as a tireless first reader, not a replacement editor.
 
 ## License
 

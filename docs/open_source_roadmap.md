@@ -14,14 +14,15 @@
 - [x] Shared OpenAI-compatible URL/auth helpers
 - [x] OpenAI-compatible provider settings
 - [x] Connection test per provider
-- [ ] Safer cloud privacy prompt before first cloud run
+- [x] Safer cloud privacy prompt before first cloud run
 - [ ] Dedicated adapters for providers with non-standard request formats
 
 ## 0.3.0 Packaging
 
 - PyInstaller Windows build
 - Portable ZIP release
-- GitHub Actions test workflow
+- [x] GitHub Actions test workflow
+- [ ] README screenshots and release assets
 
 ## Later
 
