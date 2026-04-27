@@ -55,7 +55,7 @@ Those files already exist locally.
 The local repository already has this remote configured:
 
 ```text
-origin  https://github.com/pqzmwoxn6543210-cpu/PhotoTriage-AI.git
+origin  https://github.com/XIXIJCrG/PhotoTriage-AI.git
 ```
 
 After creating the empty GitHub repository, run:

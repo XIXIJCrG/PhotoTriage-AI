@@ -1,6 +1,6 @@
 # PhotoTriage AI
 
-[![Tests](https://github.com/pqzmwoxn6543210-cpu/PhotoTriage-AI/actions/workflows/tests.yml/badge.svg)](https://github.com/pqzmwoxn6543210-cpu/PhotoTriage-AI/actions/workflows/tests.yml)
+[![Tests](https://github.com/XIXIJCrG/PhotoTriage-AI/actions/workflows/tests.yml/badge.svg)](https://github.com/XIXIJCrG/PhotoTriage-AI/actions/workflows/tests.yml)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
