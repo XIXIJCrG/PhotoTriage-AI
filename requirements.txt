@@ -2,5 +2,3 @@ Pillow>=10
 requests>=2.31
 tqdm>=4.65
 PySide6>=6.6
-# Optional, needed for RAW preview/thumbnail support.
-rawpy>=0.21

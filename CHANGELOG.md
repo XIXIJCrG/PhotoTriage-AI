@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added optional dependency split for RAW support.
+- Added CI compile and GUI smoke checks.
+- Added a Windows portable release build workflow.
+- Refined privacy and setup documentation.
+
+## 0.1.0 - 2026-04-28
+
 - Prepared the project for open-source release.
 - Added local and cloud OpenAI-compatible provider settings.
 - Added Simplified Chinese and English UI translation infrastructure.

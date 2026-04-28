@@ -1,0 +1,3 @@
+# Optional RAW preview/thumbnail support.
+-r requirements.txt
+rawpy>=0.21

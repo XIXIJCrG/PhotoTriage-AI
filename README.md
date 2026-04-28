@@ -1,6 +1,7 @@
 # PhotoTriage AI
 
 [![Tests](https://github.com/XIXIJCrG/PhotoTriage-AI/actions/workflows/tests.yml/badge.svg)](https://github.com/XIXIJCrG/PhotoTriage-AI/actions/workflows/tests.yml)
+[![Release](https://img.shields.io/github/v/release/XIXIJCrG/PhotoTriage-AI?include_prereleases)](https://github.com/XIXIJCrG/PhotoTriage-AI/releases)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -95,16 +96,31 @@ For local `llama.cpp`, copy [start-triage-server.example.bat](start-triage-serve
 
 ## Quick Start
 
-Install dependencies:
+### For Users
+
+The current `v0.1.0` release is a source preview. A portable Windows build workflow is included, and packaged downloads will appear on the [Releases](https://github.com/XIXIJCrG/PhotoTriage-AI/releases) page as the project stabilizes.
+
+For now, run from source:
+
+```bash
+git clone https://github.com/XIXIJCrG/PhotoTriage-AI.git
+cd PhotoTriage-AI
+python -m pip install -r requirements.txt
+python app.py
+```
+
+If you want RAW preview/thumbnail support, install the optional RAW dependencies:
+
+```bash
+python -m pip install -r requirements-raw.txt
+```
+
+### For Developers
+
+Install the default development/runtime dependencies:
 
 ```bash
 python -m pip install -r requirements.txt
-```
-
-Start the GUI:
-
-```bash
-python app.py
 ```
 
 Basic workflow:
@@ -183,6 +199,7 @@ Useful docs:
 - [Privacy](docs/privacy.md)
 - [Open-source roadmap](docs/open_source_roadmap.md)
 - [Development plan](docs/development_plan.md)
+- [Maintainer release checklist](docs/github_publish.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
 

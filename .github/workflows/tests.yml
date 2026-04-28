@@ -27,7 +27,25 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
+      - name: Compile core modules
+        run: >
+          python -m py_compile
+          app.py
+          triage.py
+          core/i18n.py
+          core/providers.py
+          gui/main_window.py
+          gui/server_panel.py
+          gui/settings_dialog.py
+          gui/worker.py
+
       - name: Run tests
         env:
           QT_QPA_PLATFORM: offscreen
         run: python -m unittest discover -s tests -v
+
+      - name: GUI smoke test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -c "from PySide6.QtWidgets import QApplication; from gui.main_window import MainWindow; app=QApplication([]); win=MainWindow(); print(win.windowTitle()); win.results_view.shutdown(); win.server_panel.shutdown(); win.close()"

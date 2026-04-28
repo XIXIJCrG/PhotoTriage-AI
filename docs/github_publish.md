@@ -1,6 +1,14 @@
-# GitHub Publish Checklist
+# Maintainer Release Checklist
 
-## Repository
+This project is already published at:
+
+```text
+https://github.com/XIXIJCrG/PhotoTriage-AI
+```
+
+Use this checklist when preparing repository metadata or a new release.
+
+## Repository Metadata
 
 Recommended repository name:
 
@@ -40,16 +48,6 @@ desktop-app
 
 Leave empty for now, or use the repository URL after publishing.
 
-## Repository Options
-
-When creating the repository on GitHub:
-
-- Do not add a README.
-- Do not add a `.gitignore`.
-- Do not add a license.
-
-Those files already exist locally.
-
 ## Push
 
 The local repository already has this remote configured:
@@ -58,13 +56,13 @@ The local repository already has this remote configured:
 origin  https://github.com/XIXIJCrG/PhotoTriage-AI.git
 ```
 
-After creating the empty GitHub repository, run:
+After committing locally, run:
 
 ```bash
-git push -u origin main
+git push
 ```
 
-## First Release Notes Draft
+## Release Notes Draft
 
 ```text
 Initial open-source preview of PhotoTriage AI.

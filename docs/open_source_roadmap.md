@@ -19,10 +19,11 @@
 
 ## 0.3.0 Packaging
 
-- PyInstaller Windows build
-- Portable ZIP release
+- [x] PyInstaller Windows build workflow
+- [x] Portable ZIP release workflow
 - [x] GitHub Actions test workflow
 - [x] README screenshots and release assets
+- [ ] Publish the first portable ZIP as a Release asset
 
 ## Later
 
