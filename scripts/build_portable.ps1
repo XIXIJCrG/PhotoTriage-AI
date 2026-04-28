@@ -32,6 +32,6 @@ Copy-Item -LiteralPath "start-triage-server.example.bat" -Destination $PackageDi
 Copy-Item -LiteralPath "requirements.txt" -Destination $PackageDir
 Copy-Item -LiteralPath "requirements-raw.txt" -Destination $PackageDir
 
-Compress-Archive -LiteralPath "$PackageDir\*" -DestinationPath $ZipPath -Force
+Compress-Archive -Path (Join-Path $PackageDir "*") -DestinationPath $ZipPath -Force
 
 Write-Host "Portable package created: $ZipPath"

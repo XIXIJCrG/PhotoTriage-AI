@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.2 - 2026-04-28
+
+- Fixed Windows portable ZIP packaging in the release workflow.
+
 ## 0.1.1 - 2026-04-28
 
 - Added optional dependency split for RAW support.
