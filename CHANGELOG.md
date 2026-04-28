@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.1 - 2026-04-28
+
 - Added optional dependency split for RAW support.
 - Added CI compile and GUI smoke checks.
 - Added a Windows portable release build workflow.
