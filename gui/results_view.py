@@ -62,17 +62,19 @@ class PhotoFilterProxy(QSortFilterProxyModel):
         self.score_max = 10
         self.scene = ""
         self.has_person = ""
+        self.recommendation = ""
         self.sort_col = "综合评分"
         self.sort_asc = False
         self.group_by_time = False
 
     # ---------- 筛选 ----------
     def set_filters(self, score_min: int, score_max: int,
-                    scene: str, has_person: str):
+                    scene: str, has_person: str, recommendation: str = ""):
         self.score_min = score_min
         self.score_max = score_max
         self.scene = scene
         self.has_person = has_person
+        self.recommendation = recommendation
         self.invalidate()  # 同时失效 filter 和 sort
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
@@ -88,6 +90,12 @@ class PhotoFilterProxy(QSortFilterProxyModel):
         if self.scene and row.get("场景", "") != self.scene:
             return False
         if self.has_person and row.get("有人", "") != self.has_person:
+            return False
+        rec = str(row.get("组内推荐", "") or "").strip()
+        if self.recommendation == "__hide_reject__":
+            if rec == "淘汰":
+                return False
+        elif self.recommendation and rec != self.recommendation:
             return False
         return True
 
@@ -121,10 +129,29 @@ class PhotoFilterProxy(QSortFilterProxyModel):
         rrow = src.data(right, ROLE_ROW) or {}
         lv = lrow.get(self.sort_col, "") or ""
         rv = rrow.get(self.sort_col, "") or ""
+        if self.sort_col == "分组ID":
+            if bool(lv) != bool(rv):
+                return bool(lv)
+            return (str(lv), self._numeric_value(lrow.get("组内排名", ""))) < (
+                str(rv), self._numeric_value(rrow.get("组内排名", "")))
+        if self.sort_col == "组内排名":
+            return (str(lrow.get("分组ID", "") or "ZZZZ"),
+                    self._numeric_value(lv),
+                    str(lrow.get("JPG文件名", ""))) < (
+                        str(rrow.get("分组ID", "") or "ZZZZ"),
+                        self._numeric_value(rv),
+                        str(rrow.get("JPG文件名", "")))
         try:
             return float(lv or 0) < float(rv or 0)
         except (TypeError, ValueError):
             return str(lv) < str(rv)
+
+    @staticmethod
+    def _numeric_value(value) -> float:
+        try:
+            return float(value or 0)
+        except (TypeError, ValueError):
+            return 0.0
 
 
 class ResultsView(QWidget):
@@ -312,21 +339,51 @@ class ResultsView(QWidget):
         else:
             item.setData(row, ROLE_ROW)
             item.setToolTip(self._build_tooltip(row))
+        self._update_group_totals()
 
     @staticmethod
     def _build_tooltip(row: dict) -> str:
+        group = row.get("分组ID", "")
+        rank = row.get("组内排名", "")
+        total = row.get("组内总数", "")
+        rec = row.get("组内推荐", "")
+        group_line = ""
+        if group or rec:
+            rank_text = f"{rank}/{total}" if rank and total else rank
+            group_line = f"\n{group} · {rec} · {rank_text}\n{row.get('组内说明', '')}"
         return (f"{row.get('JPG文件名', '')}\n"
                 f"综合 {row.get('综合评分', '')} · "
                 f"{row.get('场景', '')} · "
-                f"{row.get('拍摄意图', '')}\n"
+                f"{row.get('拍摄意图', '')}"
+                f"{group_line}\n"
                 f"{row.get('一句话总评', '')}")
+
+    def _update_group_totals(self):
+        counts: dict[str, int] = {}
+        for row_num in range(self.model.rowCount()):
+            item = self.model.item(row_num)
+            row = item.data(ROLE_ROW) if item is not None else {}
+            group_id = str((row or {}).get("分组ID", "") or "").strip()
+            if group_id:
+                counts[group_id] = counts.get(group_id, 0) + 1
+        for row_num in range(self.model.rowCount()):
+            item = self.model.item(row_num)
+            if item is None:
+                continue
+            row = dict(item.data(ROLE_ROW) or {})
+            group_id = str(row.get("分组ID", "") or "").strip()
+            if group_id:
+                row["组内总数"] = str(counts.get(group_id, ""))
+                item.setData(row, ROLE_ROW)
+                item.setToolTip(self._build_tooltip(row))
 
     # ---------- 筛选 / 排序 ----------
     def _apply_filter(self):
         lo, hi = self.filter_bar.score_range()
         self.proxy.set_filters(lo, hi,
                                self.filter_bar.scene_filter(),
-                               self.filter_bar.has_person_filter())
+                               self.filter_bar.has_person_filter(),
+                               self.filter_bar.recommendation_filter())
         self.proxy.group_by_time = self.filter_bar.group_by_time()
         if self.proxy.group_by_time:
             self._recompute_groups()

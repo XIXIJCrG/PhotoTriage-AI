@@ -36,7 +36,8 @@ def _make_jpg(path: Path, size=(200, 150)):
 
 
 def _make_row(jpg_name: str, score: int, scene: str = "人像",
-              has_person: str = "是"):
+              has_person: str = "是", group_id: str = "",
+              group_rank: str = "", recommendation: str = ""):
     row = {f: "" for f in CSV_FIELDS}
     row.update({
         "JPG文件名": jpg_name,
@@ -47,6 +48,9 @@ def _make_row(jpg_name: str, score: int, scene: str = "人像",
         "综合评分": str(score),
         "艺术总分": str(score),
         "技术总分": str(score),
+        "分组ID": group_id,
+        "组内排名": group_rank,
+        "组内推荐": recommendation,
     })
     return row
 
@@ -128,6 +132,37 @@ class TestPhotoFilterProxy(unittest.TestCase):
             names.append(model.itemFromIndex(src).data(ROLE_JPG_PATH))
         self.assertEqual(names, ["b.jpg", "c.jpg", "a.jpg"])
 
+    def test_filter_recommendation(self):
+        model = self._make_model([
+            _make_row("a.jpg", 9, recommendation="精选"),
+            _make_row("b.jpg", 7, recommendation="备选"),
+            _make_row("c.jpg", 3, recommendation="淘汰"),
+        ])
+        proxy = PhotoFilterProxy()
+        proxy.setSourceModel(model)
+        proxy.set_filters(0, 10, "", "", "精选")
+        self.assertEqual(proxy.rowCount(), 1)
+        src = proxy.mapToSource(proxy.index(0, 0))
+        self.assertEqual(model.itemFromIndex(src).data(ROLE_JPG_PATH), "a.jpg")
+
+        proxy.set_filters(0, 10, "", "", "__hide_reject__")
+        self.assertEqual(proxy.rowCount(), 2)
+
+    def test_sort_by_group_rank(self):
+        model = self._make_model([
+            _make_row("b.jpg", 7, group_id="G0002", group_rank="2"),
+            _make_row("a.jpg", 9, group_id="G0001", group_rank="2"),
+            _make_row("c.jpg", 8, group_id="G0001", group_rank="1"),
+        ])
+        proxy = PhotoFilterProxy()
+        proxy.setSourceModel(model)
+        proxy.set_sort("组内排名", ascending=True)
+        names = []
+        for r in range(proxy.rowCount()):
+            src = proxy.mapToSource(proxy.index(r, 0))
+            names.append(model.itemFromIndex(src).data(ROLE_JPG_PATH))
+        self.assertEqual(names, ["c.jpg", "a.jpg", "b.jpg"])
+
 
 class TestResultsViewLoadCsv(unittest.TestCase):
     @classmethod
@@ -194,6 +229,20 @@ class TestResultsViewLoadCsv(unittest.TestCase):
         _make_jpg(jpg_new)
         view.append_row(jpg_new, _make_row("D.jpg", 8))
         self.assertEqual(view.model.rowCount(), count_before + 1)
+
+    def test_group_total_added_for_card_display(self):
+        view = ResultsView()
+        self.view = view
+        view.set_folder(self.folder)
+        view.append_row(self.folder / "A.jpg", _make_row(
+            "A.jpg", 9, group_id="G0001", group_rank="1",
+            recommendation="精选"))
+        view.append_row(self.folder / "B.jpg", _make_row(
+            "B.jpg", 7, group_id="G0001", group_rank="2",
+            recommendation="备选"))
+
+        row = view.items_by_jpg["A.jpg"].data(ROLE_ROW)
+        self.assertEqual(row["组内总数"], "2")
 
 
 if __name__ == "__main__":

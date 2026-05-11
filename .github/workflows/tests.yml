@@ -35,7 +35,10 @@ jobs:
           core/i18n.py
           core/providers.py
           core/selection.py
+          gui/filter_bar.py
           gui/main_window.py
+          gui/photo_card_delegate.py
+          gui/results_view.py
           gui/server_panel.py
           gui/settings_dialog.py
           gui/worker.py

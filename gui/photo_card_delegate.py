@@ -70,6 +70,14 @@ INTENT_LABELS = {
     "unknown": "intent.unknown",
 }
 
+RECOMMENDATION_COLORS = {
+    "精选": ("#DCFCE7", "#166534"),
+    "备选": ("#DBEAFE", "#1D4ED8"),
+    "保留": ("#E2E8F0", "#334155"),
+    "淘汰": ("#FEE2E2", "#B91C1C"),
+    "单张": ("#F1F5F9", "#475569"),
+}
+
 
 def _localized_value(value: str, mapping: dict[str, str]) -> str:
     text = str(value or "").strip()
@@ -151,6 +159,38 @@ class PhotoCardDelegate(QStyledItemDelegate):
         subject = row.get("主体", "") or row.get("错误", "") or ""
         filename = row.get("JPG文件名", "")
         analysed = bool(str(score).strip())
+
+        group_id = str(row.get("分组ID", "") or "").strip()
+        group_rank = str(row.get("组内排名", "") or "").strip()
+        group_total = str(row.get("组内总数", "") or "").strip()
+        recommendation = str(row.get("组内推荐", "") or "").strip()
+        if group_id or recommendation:
+            rank_text = f"{group_rank}/{group_total}" if group_rank and group_total else group_rank
+            parts = [x for x in (group_id, recommendation, rank_text) if x]
+            badge_text = " · ".join(parts)
+            bg_hex, fg_hex = RECOMMENDATION_COLORS.get(
+                recommendation, ("#E2E8F0", "#334155"))
+            badge_font = QFont(option.font)
+            badge_font.setBold(True)
+            badge_font.setPointSize(max(8, badge_font.pointSize() - 1))
+            painter.setFont(badge_font)
+            badge_fm = painter.fontMetrics()
+            badge_w = min(image_rect.width() - 16, badge_fm.horizontalAdvance(badge_text) + 18)
+            badge_rect = QRect(
+                image_rect.x() + 8,
+                image_rect.bottom() - 30,
+                badge_w,
+                22,
+            )
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(bg_hex))
+            painter.drawRoundedRect(QRectF(badge_rect), 11, 11)
+            painter.setPen(QColor(fg_hex))
+            painter.drawText(
+                badge_rect.adjusted(9, 0, -9, 0),
+                Qt.AlignLeft | Qt.AlignVCenter,
+                badge_fm.elidedText(badge_text, Qt.ElideRight, badge_w - 18),
+            )
 
         text_x = int(outer.x() + 12)
         text_w = int(outer.width() - 24)

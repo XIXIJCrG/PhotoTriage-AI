@@ -33,6 +33,8 @@ SCENE_CHOICES = [
 SORT_CHOICES = [
     ("sort.overall_desc", "综合评分", False),
     ("sort.overall_asc", "综合评分", True),
+    ("sort.group_id_asc", "分组ID", True),
+    ("sort.group_rank_asc", "组内排名", True),
     ("sort.aesthetic_desc", "艺术总分", False),
     ("sort.technical_desc", "技术总分", False),
     ("sort.flattering_desc", "美感", False),
@@ -41,6 +43,16 @@ SORT_CHOICES = [
     ("sort.composition_desc", "构图", False),
     ("sort.lighting_desc", "光线", False),
     ("sort.filename_asc", "JPG文件名", True),
+]
+
+RECOMMENDATION_CHOICES = [
+    ("filter.any", ""),
+    ("recommendation.pick", "精选"),
+    ("recommendation.backup", "备选"),
+    ("recommendation.keep", "保留"),
+    ("recommendation.reject", "淘汰"),
+    ("recommendation.single", "单张"),
+    ("recommendation.hide_reject", "__hide_reject__"),
 ]
 
 
@@ -78,6 +90,10 @@ class FilterBar(QWidget):
         self.has_person_combo.addItem(tr("filter.has_person"), "是")
         self.has_person_combo.addItem(tr("filter.no_person"), "否")
 
+        self.recommendation_combo = QComboBox()
+        for label_key, value in RECOMMENDATION_CHOICES:
+            self.recommendation_combo.addItem(tr(label_key), value)
+
         self.sort_combo = QComboBox()
         for label_key, _, _ in SORT_CHOICES:
             self.sort_combo.addItem(tr(label_key))
@@ -104,6 +120,9 @@ class FilterBar(QWidget):
         lay.addWidget(QLabel(tr("filter.person")))
         lay.addWidget(self.has_person_combo)
         lay.addSpacing(12)
+        lay.addWidget(QLabel(tr("filter.recommendation")))
+        lay.addWidget(self.recommendation_combo)
+        lay.addSpacing(12)
         lay.addWidget(QLabel(tr("filter.sort")))
         lay.addWidget(self.sort_combo)
         lay.addSpacing(12)
@@ -118,6 +137,7 @@ class FilterBar(QWidget):
         self.max_spin.valueChanged.connect(self._on_changed)
         self.scene_combo.currentIndexChanged.connect(self._on_changed)
         self.has_person_combo.currentIndexChanged.connect(self._on_changed)
+        self.recommendation_combo.currentIndexChanged.connect(self._on_changed)
         self.sort_combo.currentIndexChanged.connect(self._on_changed)
         self.group_cb.toggled.connect(self._on_changed)
         self.reset_btn.clicked.connect(self._on_reset)
@@ -130,7 +150,8 @@ class FilterBar(QWidget):
 
     def _on_reset(self):
         widgets = (self.min_spin, self.max_spin,
-                   self.scene_combo, self.has_person_combo, self.sort_combo,
+                   self.scene_combo, self.has_person_combo,
+                   self.recommendation_combo, self.sort_combo,
                    self.group_cb)
         for w in widgets:
             w.blockSignals(True)
@@ -138,6 +159,7 @@ class FilterBar(QWidget):
         self.max_spin.setValue(10)
         self.scene_combo.setCurrentIndex(0)
         self.has_person_combo.setCurrentIndex(0)
+        self.recommendation_combo.setCurrentIndex(0)
         self.sort_combo.setCurrentIndex(0)
         self.group_cb.setChecked(False)
         for w in widgets:
@@ -160,6 +182,10 @@ class FilterBar(QWidget):
     def has_person_filter(self) -> str:
         """'' / '是' / '否'"""
         return self.has_person_combo.currentData() or ""
+
+    def recommendation_filter(self) -> str:
+        """'' / recommendation label / '__hide_reject__'"""
+        return self.recommendation_combo.currentData() or ""
 
     def sort_key(self) -> tuple[str, bool]:
         """返回 (column_name, ascending)"""

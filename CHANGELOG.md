@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.4 - 2026-05-11
+
+- Display group recommendations directly on result cards.
+- Added recommendation filters for pick, backup, keep, reject, single, and hide rejects.
+- Added group ID and group rank sorting in the results view.
+- Added runtime group totals for card display.
+
 ## 0.1.3 - 2026-05-11
 
 - Added provider retry and connection adapter helpers.
