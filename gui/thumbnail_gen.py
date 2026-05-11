@@ -84,7 +84,7 @@ class ThumbnailGenerator(QThread):
         super().__init__(parent)
         self._queue: "queue.Queue[tuple[Path, Path] | None]" = queue.Queue()
         self._stop = threading.Event()
-        self._seen: set[Path] = set()
+        self._seen: set[tuple[Path, Path]] = set()
         self._seen_lock = threading.Lock()
         self._workers = max(1, workers)
 
@@ -94,10 +94,11 @@ class ThumbnailGenerator(QThread):
         已经排过队的会跳过(防止重复)。"""
         src = Path(src)
         dst = thumb_path_for(folder, src)
+        key = (src, dst)
         with self._seen_lock:
-            if src in self._seen:
+            if key in self._seen:
                 return dst
-            self._seen.add(src)
+            self._seen.add(key)
         self._queue.put((src, dst))
         return dst
 

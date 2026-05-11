@@ -1,6 +1,13 @@
 import unittest
+from unittest.mock import Mock, patch
 
-from core.providers import auth_headers, chat_completions_url, models_url, normalize_base_url
+from core.providers import (
+    OpenAICompatibleVisionProvider,
+    auth_headers,
+    chat_completions_url,
+    models_url,
+    normalize_base_url,
+)
 
 
 class TestProviderUrls(unittest.TestCase):
@@ -25,6 +32,60 @@ class TestProviderUrls(unittest.TestCase):
     def test_auth_headers(self):
         self.assertEqual(auth_headers("sk-test"), {"Authorization": "Bearer sk-test"})
         self.assertIsNone(auth_headers(""))
+
+
+class TestOpenAICompatibleVisionProvider(unittest.TestCase):
+    def test_analyze_encoded_image_does_not_retry_fatal_http_status(self):
+        """401/403 等鉴权错误不应盲目重试,避免浪费额度和等待。"""
+        resp = Mock()
+        resp.status_code = 401
+        resp.text = "Unauthorized"
+        resp.headers = {}
+
+        provider = OpenAICompatibleVisionProvider(
+            base_url="https://example.com/v1",
+            model="vision-model",
+            max_retries=2,
+        )
+        with patch("core.providers.requests.post", return_value=resp) as post:
+            result = provider.analyze_encoded_image("abc", "prompt")
+
+        self.assertFalse(result.ok)
+        self.assertIn("HTTP 401", result.error)
+        self.assertEqual(post.call_count, 1)
+
+    def test_analyze_encoded_image_adds_local_thinking_flag(self):
+        """本地 provider 保留 disable thinking 参数,云端 provider 不加。"""
+        resp = Mock()
+        resp.status_code = 200
+        resp.json.return_value = {"choices": [{"message": {"content": "{}"}}]}
+
+        provider = OpenAICompatibleVisionProvider(
+            base_url="http://127.0.0.1:8080/v1",
+            model="local-model",
+            provider_type="local",
+        )
+        with patch("core.providers.requests.post", return_value=resp) as post:
+            result = provider.analyze_encoded_image("abc", "prompt")
+
+        self.assertTrue(result.ok)
+        payload = post.call_args.kwargs["json"]
+        self.assertEqual(payload["chat_template_kwargs"], {"enable_thinking": False})
+
+    def test_check_connection_returns_requested_model_when_present(self):
+        resp = Mock()
+        resp.status_code = 200
+        resp.json.return_value = {"data": [{"id": "a"}, {"id": "target"}]}
+
+        provider = OpenAICompatibleVisionProvider(
+            base_url="https://example.com/v1",
+            model="target",
+        )
+        with patch("core.providers.requests.get", return_value=resp):
+            ok, info = provider.check_connection()
+
+        self.assertTrue(ok)
+        self.assertEqual(info, "target")
 
 
 if __name__ == "__main__":

@@ -34,6 +34,7 @@ jobs:
           triage.py
           core/i18n.py
           core/providers.py
+          core/selection.py
           gui/main_window.py
           gui/server_panel.py
           gui/settings_dialog.py

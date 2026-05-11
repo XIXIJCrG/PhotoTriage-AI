@@ -20,11 +20,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-import requests
 from PIL import Image, ImageOps
 from tqdm import tqdm
 
-from core.providers import auth_headers, chat_completions_url, is_local_provider, models_url
+from core.providers import OpenAICompatibleVisionProvider
+from core.selection import GROUP_FIELDS, apply_group_selection_to_rows
 
 # Windows 控制台默认 GBK,强制 UTF-8 以正确显示中文和符号
 if sys.platform == "win32":
@@ -49,6 +49,9 @@ MAX_TOKENS = 1800
 DISABLE_THINKING = True
 SKIP_PROCESSED = True
 MAX_RETRIES = 2
+RETRY_BACKOFF_SECONDS = 1.0
+RETRYABLE_HTTP_STATUS = {429, 500, 502, 503, 504}
+FATAL_HTTP_STATUS = {400, 401, 403, 404}
 WRITE_METADATA = True
 METADATA_MODE = "embed"  # embed: 写入 JPG/PNG, sidecar: 只生成 .xmp sidecar
 # 并发数默认值 — 必须 ≤ llama-server 的 --parallel 值。
@@ -242,6 +245,119 @@ def parse_response(text: str) -> dict[str, Any]:
     return {"_error": "JSON 解析失败", "_raw": text[:500]}
 
 
+def _score_to_int(value: Any, default: int = 0, min_value: int = 0, max_value: int = 10) -> int:
+    """把模型返回的分数字段归一成整数,并限制到安全范围。"""
+    if value is None or value == "":
+        return default
+    if isinstance(value, bool):
+        return default
+    try:
+        # 兼容 "8" / "8.5" / 8.5。这里取四舍五入,避免 CSV/XMP 出现脏字符串。
+        score = int(round(float(value)))
+    except (TypeError, ValueError):
+        return default
+    return max(min_value, min(max_value, score))
+
+
+def _bool_value(value: Any) -> bool | None:
+    """把模型常见的 true/false/是/否/yes/no 归一成 bool。"""
+    if isinstance(value, bool) or value is None:
+        return value
+    if isinstance(value, (int, float)):
+        if value == 1:
+            return True
+        if value == 0:
+            return False
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in {"true", "yes", "y", "1", "是", "有"}:
+            return True
+        if v in {"false", "no", "n", "0", "否", "无"}:
+            return False
+    return None
+
+
+def _list_of_str(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(x).strip() for x in value if str(x).strip()]
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
+    """清洗模型输出,避免 CSV/XMP 被不规范 JSON 字段污染。"""
+    if not isinstance(result, dict) or "_error" in result:
+        return result
+
+    content = result.get("content") if isinstance(result.get("content"), dict) else {}
+    technical = result.get("technical") if isinstance(result.get("technical"), dict) else {}
+    aesthetic = result.get("aesthetic") if isinstance(result.get("aesthetic"), dict) else {}
+    portrait = result.get("portrait") if isinstance(result.get("portrait"), dict) else None
+    overall = result.get("overall") if isinstance(result.get("overall"), dict) else {}
+
+    scene_type = str(content.get("scene_type") or "other").strip()
+    if scene_type not in SCENE_CN:
+        scene_type = "other"
+    time_of_day = str(content.get("time_of_day") or "unknown").strip()
+    if time_of_day not in TIME_CN:
+        time_of_day = "unknown"
+    shooting_intent = str(content.get("shooting_intent") or "unknown").strip()
+    if shooting_intent not in INTENT_CN:
+        shooting_intent = "unknown"
+
+    cleaned: dict[str, Any] = {
+        "content": {
+            "scene_type": scene_type,
+            "primary_subject": str(content.get("primary_subject") or "").strip(),
+            "impression": str(content.get("impression") or "").strip(),
+            "shooting_intent": shooting_intent,
+            "has_person": _bool_value(content.get("has_person")),
+            "person_count": _score_to_int(content.get("person_count"), default=0, min_value=0, max_value=999),
+            "time_of_day": time_of_day,
+            "dominant_colors": _list_of_str(content.get("dominant_colors")),
+        },
+        "technical": {
+            "sharpness": _score_to_int(technical.get("sharpness"), min_value=1, max_value=5),
+            "exposure": _score_to_int(technical.get("exposure"), min_value=1, max_value=5),
+            "noise_level": _score_to_int(technical.get("noise_level"), min_value=1, max_value=5),
+            "white_balance": _score_to_int(technical.get("white_balance"), min_value=1, max_value=5),
+            "has_motion_blur": _bool_value(technical.get("has_motion_blur")),
+            "is_motion_blur_intentional": _bool_value(technical.get("is_motion_blur_intentional")),
+        },
+        "aesthetic": {
+            "composition": _score_to_int(aesthetic.get("composition"), min_value=1, max_value=10),
+            "lighting": _score_to_int(aesthetic.get("lighting"), min_value=1, max_value=10),
+            "color": _score_to_int(aesthetic.get("color"), min_value=1, max_value=10),
+            "subject_clarity": _score_to_int(aesthetic.get("subject_clarity"), min_value=1, max_value=10),
+            "storytelling": _score_to_int(aesthetic.get("storytelling"), min_value=1, max_value=10),
+            "uniqueness": _score_to_int(aesthetic.get("uniqueness"), min_value=1, max_value=10),
+        },
+        "portrait": None,
+        "overall": {
+            "technical_score": _score_to_int(overall.get("technical_score"), min_value=1, max_value=10),
+            "aesthetic_score": _score_to_int(overall.get("aesthetic_score"), min_value=1, max_value=10),
+            "overall_score": _score_to_int(overall.get("overall_score"), min_value=1, max_value=10),
+            "strengths": _list_of_str(overall.get("strengths")),
+            "weaknesses": _list_of_str(overall.get("weaknesses")),
+            "one_line_comment": str(overall.get("one_line_comment") or "").strip(),
+        },
+    }
+
+    # 只有人像才保留 portrait,避免非人像结果里混入空对象或脏字段。
+    if scene_type == "portrait":
+        portrait = portrait or {}
+        cleaned["portrait"] = {
+            "expression": _score_to_int(portrait.get("expression"), min_value=1, max_value=10),
+            "pose": _score_to_int(portrait.get("pose"), min_value=1, max_value=10),
+            "eye_contact": _score_to_int(portrait.get("eye_contact"), min_value=1, max_value=10),
+            "flattering": _score_to_int(portrait.get("flattering"), min_value=1, max_value=10),
+            "portrait_note": str(portrait.get("portrait_note") or "").strip(),
+        }
+    return cleaned
+
+
 def analyze_image(
     jpg_path: Path,
     prompt: Optional[str] = None,
@@ -252,46 +368,32 @@ def analyze_image(
     provider_type: Optional[str] = None,
 ) -> dict[str, Any]:
     b64 = encode_image(jpg_path)
-    payload = {
-        "model": model or DEFAULT_MODEL,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt or PROMPT},
-                    {"type": "image_url",
-                     "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-                ],
-            }
-        ],
-        "max_tokens": MAX_TOKENS,
-        "temperature": TEMPERATURE,
-    }
-    if DISABLE_THINKING and is_local_provider(provider_type):
-        payload["chat_template_kwargs"] = {"enable_thinking": False}
-    url = api_url or chat_completions_url(base_url or DEFAULT_BASE_URL)
-    headers = auth_headers(api_key)
+    provider = OpenAICompatibleVisionProvider(
+        base_url=base_url or DEFAULT_BASE_URL,
+        api_url=api_url,
+        model=model or DEFAULT_MODEL,
+        api_key=api_key,
+        provider_type=provider_type,
+        timeout=TIMEOUT,
+        max_tokens=MAX_TOKENS,
+        temperature=TEMPERATURE,
+        disable_thinking=DISABLE_THINKING,
+        max_retries=MAX_RETRIES,
+        retry_backoff_seconds=RETRY_BACKOFF_SECONDS,
+        retryable_http_status=frozenset(RETRYABLE_HTTP_STATUS),
+        fatal_http_status=frozenset(FATAL_HTTP_STATUS),
+    )
     last_err: Optional[str] = None
     for attempt in range(MAX_RETRIES + 1):
-        try:
-            r = requests.post(url, json=payload, headers=headers, timeout=TIMEOUT)
-            if r.status_code != 200:
-                last_err = f"HTTP {r.status_code}: {r.text[:200]}"
+        response = provider.analyze_encoded_image(b64, prompt or PROMPT)
+        if not response.ok:
+            return {"_error": response.error}
+        result = parse_response(response.content)
+        if "_error" in result:
+            last_err = result["_error"]
+            if attempt < MAX_RETRIES:
                 continue
-            content = r.json()["choices"][0]["message"]["content"]
-            result = parse_response(content)
-            if "_error" in result:
-                last_err = result["_error"]
-                if attempt < MAX_RETRIES:
-                    continue
-            return result
-        except requests.exceptions.ConnectionError as e:
-            # Model service is unreachable; stop the batch early.
-            raise RuntimeError(f"模型服务连接失败: {e}") from e
-        except requests.exceptions.Timeout:
-            last_err = f"超时 (>{TIMEOUT}s)"
-        except Exception as e:  # noqa: BLE001
-            last_err = f"{type(e).__name__}: {e}"
+        return normalize_result(result)
     return {"_error": last_err or "未知错误"}
 
 
@@ -329,6 +431,7 @@ def xml_escape(s: str) -> str:
 
 def build_metadata(result: dict[str, Any]) -> dict[str, Any]:
     """从分析结果构建要写入的元数据(全部中文字符串)。"""
+    result = normalize_result(result)
     content = result.get("content", {}) or {}
     tech = result.get("technical", {}) or {}
     aes = result.get("aesthetic", {}) or {}
@@ -592,6 +695,7 @@ CSV_FIELDS = [
     "神态", "姿态", "眼神", "美感", "人像点评",
     "技术总分", "艺术总分", "综合评分",
     "优点", "问题", "一句话总评",
+    *GROUP_FIELDS,
     "耗时秒", "错误",
 ]
 
@@ -618,6 +722,7 @@ def _clean(v: Any) -> Any:
 
 def result_to_row(jpg: Path, raw: Optional[Path], result: dict[str, Any],
                   elapsed: float) -> dict[str, Any]:
+    result = normalize_result(result)
     err = result.get("_error", "")
     content = result.get("content", {}) or {}
     tech = result.get("technical", {}) or {}
@@ -674,11 +779,49 @@ def result_to_row(jpg: Path, raw: Optional[Path], result: dict[str, Any],
         "优点": "|".join(str(s) for s in strengths),
         "问题": "|".join(str(s) for s in weaknesses),
         "一句话总评": _g(ov, "one_line_comment"),
+        "分组ID": "",
+        "组内排名": "",
+        "组内推荐": "",
+        "组内说明": "",
         "耗时秒": round(elapsed, 2),
         "错误": err,
     }
     # 把所有字符串字段的换行符换成空格,避免 Excel 显示撑行
     return {k: _clean(v) for k, v in row.items()}
+
+
+def rewrite_csv_rows(csv_path: Path, rows: list[dict[str, Any]]) -> None:
+    """按当前 CSV_FIELDS 重写 CSV,兼容旧字段缺失。"""
+    with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in CSV_FIELDS})
+
+
+def ensure_csv_schema(csv_path: Path) -> None:
+    """旧版本 CSV 没有新增列时,先升级表头再继续追加。"""
+    if not csv_path or not csv_path.is_file():
+        return
+    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+        fieldnames = reader.fieldnames or []
+    if list(fieldnames) != CSV_FIELDS:
+        rewrite_csv_rows(csv_path, rows)
+
+
+def refresh_group_selection(csv_path: Path, folder: Path) -> None:
+    """批处理结束后刷新整份 CSV 的同场分组选片字段。"""
+    if not csv_path or not csv_path.is_file():
+        return
+    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+    if not rows:
+        return
+    apply_group_selection_to_rows(folder, rows)
+    rewrite_csv_rows(csv_path, rows)
 
 
 def load_processed(folder: Path) -> tuple[Optional[Path], set[str]]:
@@ -723,23 +866,18 @@ def check_server(
     model: Optional[str] = None,
 ) -> tuple[bool, str]:
     """检查 OpenAI-compatible model endpoint 是否在线。返回 (ok, message)。"""
-    url = models_url(base_url or api_url)
-    headers = auth_headers(api_key)
-    try:
-        r = requests.get(url, headers=headers, timeout=timeout)
-        if r.status_code != 200:
-            return False, f"HTTP {r.status_code}"
-        data = r.json()
-        models = (data.get("data") or data.get("models") or [])
-        if not models:
-            return False, "未返回模型列表"
-        names = [m.get("id") or m.get("name") for m in models if isinstance(m, dict)]
-        names = [n for n in names if n]
-        if model and model in names:
-            return True, model
-        return True, names[0] if names else "unknown"
-    except Exception as e:  # noqa: BLE001
-        return False, f"{type(e).__name__}: {e}"
+    provider = OpenAICompatibleVisionProvider(
+        base_url=base_url or api_url,
+        api_url=api_url,
+        model=model or DEFAULT_MODEL,
+        api_key=api_key,
+        timeout=TIMEOUT,
+        max_tokens=MAX_TOKENS,
+        temperature=TEMPERATURE,
+        disable_thinking=DISABLE_THINKING,
+        max_retries=MAX_RETRIES,
+    )
+    return provider.check_connection(timeout=timeout)
 
 
 def run_batch(
@@ -810,11 +948,14 @@ def run_batch(
 
     if not todo:
         log("没有需要处理的照片。")
+        if existing_csv:
+            refresh_group_selection(existing_csv, folder)
         return {"csv_path": existing_csv, "total": len(pairs), "processed": 0,
                 "skipped": len(processed_set), "failed": 0, "fatal": None,
                 "interrupted": False}
 
     if existing_csv:
+        ensure_csv_schema(existing_csv)
         csv_path = existing_csv
         file_mode = "a"
         write_header = False
@@ -942,6 +1083,8 @@ def run_batch(
             finally:
                 # 只保持 concurrency 个任务在飞。停止时不会继续提交整批剩余照片。
                 pool.shutdown(wait=True, cancel_futures=True)
+
+    refresh_group_selection(csv_path, folder)
 
     return {
         "csv_path": csv_path,

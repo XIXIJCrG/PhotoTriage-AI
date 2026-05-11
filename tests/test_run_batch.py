@@ -196,6 +196,25 @@ class TestRunBatch(unittest.TestCase):
         self.assertEqual(result["processed"], 3)
         self.assertEqual(result["failed"], 0)
 
+    def test_result_to_row_normalizes_dirty_model_values(self):
+        """模型返回字符串/越界分数/中文布尔时,CSV 前应先清洗。"""
+        dirty = _fake_result(7)
+        dirty["content"]["has_person"] = "是"
+        dirty["content"]["person_count"] = "2"
+        dirty["technical"]["sharpness"] = "9"  # 技术分应被限制到 5
+        dirty["aesthetic"]["composition"] = "8.6"
+        dirty["overall"]["overall_score"] = "12"  # 总分应被限制到 10
+        dirty["overall"]["strengths"] = "单个优点"
+
+        row = triage.result_to_row(self.tmp / "IMG_001.jpg", None, dirty, 1.23)
+
+        self.assertEqual(row["有人"], "是")
+        self.assertEqual(row["人数"], 2)
+        self.assertEqual(row["对焦"], 5)
+        self.assertEqual(row["构图"], 9)
+        self.assertEqual(row["综合评分"], 10)
+        self.assertEqual(row["优点"], "单个优点")
+
 
 if __name__ == "__main__":
     unittest.main()

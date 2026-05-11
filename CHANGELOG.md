@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.3 - 2026-05-11
+
+- Added provider retry and connection adapter helpers.
+- Added selection grouping and ranking logic for similar shots.
+- Added normalization for dirty model score values before CSV output.
+- Improved thumbnail generation robustness.
+
 ## 0.1.2 - 2026-04-28
 
 - Fixed Windows portable ZIP packaging in the release workflow.
