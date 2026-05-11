@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from core.i18n import tr
-from core.providers import LOCAL_PROVIDER, is_local_provider
+from core.providers import DEFAULT_PROVIDER_TYPE, is_local_provider
 
 from .history_sidebar import HistorySidebar
 from .lr_integration import open_folder_in_lightroom
@@ -244,7 +244,7 @@ class MainWindow(QMainWindow):
 
         self.tabs.setCurrentWidget(self.progress_panel)
 
-        provider_type = app_settings().value("provider/type", LOCAL_PROVIDER) or LOCAL_PROVIDER
+        provider_type = app_settings().value("provider/type", DEFAULT_PROVIDER_TYPE) or DEFAULT_PROVIDER_TYPE
         if not is_local_provider(provider_type):
             accepted = bool(app_settings().value(
                 "provider/cloud_warning_accepted", False, type=bool))

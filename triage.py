@@ -23,7 +23,13 @@ from typing import Any, Callable, Optional
 from PIL import Image, ImageOps
 from tqdm import tqdm
 
-from core.providers import OpenAICompatibleVisionProvider
+from core.providers import (
+    DEFAULT_PROVIDER_TYPE,
+    OPENROUTER_FREE_BASE_URL,
+    OPENROUTER_FREE_MODEL,
+    OpenAICompatibleVisionProvider,
+    chat_completions_url,
+)
 from core.selection import GROUP_FIELDS, apply_group_selection_to_rows
 
 # Windows 控制台默认 GBK,强制 UTF-8 以正确显示中文和符号
@@ -36,9 +42,10 @@ if sys.platform == "win32":
 
 # ========== 用户配置 ==========
 
-API_URL = "http://127.0.0.1:8080/v1/chat/completions"
-DEFAULT_BASE_URL = API_URL.replace("/chat/completions", "")
-DEFAULT_MODEL = "local-vision-model"
+DEFAULT_BASE_URL = OPENROUTER_FREE_BASE_URL
+DEFAULT_MODEL = OPENROUTER_FREE_MODEL
+API_URL = chat_completions_url(DEFAULT_BASE_URL)
+DEFAULT_PROVIDER = DEFAULT_PROVIDER_TYPE
 PHOTO_FOLDER = "."
 
 TIMEOUT = 180

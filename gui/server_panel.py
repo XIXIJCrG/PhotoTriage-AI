@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.providers import LOCAL_PROVIDER, is_local_provider
+from core.providers import DEFAULT_PROVIDER_TYPE, is_local_provider
 from core.i18n import tr
 
 from triage import API_URL, DEFAULT_BASE_URL, DEFAULT_MODEL, check_server
@@ -175,7 +175,7 @@ class ServerPanel(QWidget):
     # ---------- 启/停 ----------
 
     def _on_start(self):
-        if not is_local_provider(app_settings().value("provider/type", LOCAL_PROVIDER)):
+        if not is_local_provider(app_settings().value("provider/type", DEFAULT_PROVIDER_TYPE)):
             QMessageBox.information(self, "Cloud API", tr("server.cloud_no_start"))
             return
         if self.proc and self.proc.poll() is None:
@@ -264,7 +264,7 @@ class ServerPanel(QWidget):
         if self._pending_ping is not None:
             return  # 上一次还没回来,不发新的
 
-        provider_type = app_settings().value("provider/type", LOCAL_PROVIDER) or LOCAL_PROVIDER
+        provider_type = app_settings().value("provider/type", DEFAULT_PROVIDER_TYPE) or DEFAULT_PROVIDER_TYPE
         base_url = app_settings().value("provider/base_url", DEFAULT_BASE_URL) or DEFAULT_BASE_URL
         model = app_settings().value("provider/model", DEFAULT_MODEL) or DEFAULT_MODEL
         api_key = app_settings().value("provider/api_key", "") or ""
@@ -273,6 +273,11 @@ class ServerPanel(QWidget):
             self.start_btn.setEnabled(False)
             self.start_btn.setToolTip(tr("server.cloud_no_start"))
             self.stop_btn.setEnabled(False)
+            if not str(api_key).strip():
+                self.model_label.setText(tr("server.cloud_key_required"))
+                self.model_label.setToolTip(tr("server.cloud_key_required_tip"))
+                self._set_state("stopped")
+                return
         elif self.proc is None and self.state != "running":
             self.start_btn.setEnabled(True)
             self.start_btn.setToolTip("")

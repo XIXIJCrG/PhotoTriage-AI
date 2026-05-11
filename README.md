@@ -63,7 +63,7 @@ Local mode:
 
 Cloud mode:
 
-- Cloud providers are opt-in.
+- New installs default to a free OpenRouter cloud preset so non-technical users can try the app without a local model.
 - Resized image data is sent to the configured API provider.
 - The app shows a privacy warning before the first cloud run.
 - API keys are stored only in local desktop settings and should never be committed.
@@ -80,6 +80,7 @@ The analysis core uses an OpenAI-compatible chat completions API:
 
 Supported provider modes:
 
+- Default cloud trial: OpenRouter Free Models Router
 - Local `llama.cpp` or another local OpenAI-compatible vision endpoint
 - Cloud OpenAI-compatible vision APIs
 
@@ -90,6 +91,16 @@ In Settings -> Server, configure:
 - Model name
 - API key, if required
 
+Fresh installs use this default cloud preset:
+
+```text
+Provider: OpenAI Compatible API
+Base URL: https://openrouter.ai/api/v1
+Model: openrouter/free
+```
+
+OpenRouter's free router can route requests to free models that support the needed capability, including image understanding. You still need to paste your own OpenRouter API key in Settings; the key is stored only in local app settings.
+
 For local `llama.cpp`, copy [start-triage-server.example.bat](start-triage-server.example.bat) to `start-triage-server.bat`, edit the paths, and select it in Settings. The real `start-triage-server.bat` is ignored so personal model paths do not enter the repository.
 
 ![PhotoTriage AI provider settings concept](docs/screenshots/providers.png)
@@ -98,9 +109,16 @@ For local `llama.cpp`, copy [start-triage-server.example.bat](start-triage-serve
 
 ### For Users
 
-The current `v0.1.0` release is a source preview. A portable Windows build workflow is included, and packaged downloads will appear on the [Releases](https://github.com/XIXIJCrG/PhotoTriage-AI/releases) page as the project stabilizes.
+Download the latest Windows portable ZIP from the [Releases](https://github.com/XIXIJCrG/PhotoTriage-AI/releases) page, unzip it, and run `PhotoTriageAI.exe`.
 
-For now, run from source:
+On first launch:
+
+1. Open Settings -> Server.
+2. Keep the default free cloud trial preset, or choose local `llama.cpp`.
+3. Paste your OpenRouter/API key if using the cloud preset.
+4. Pick a photo folder and start analysis.
+
+Source install is still useful for development:
 
 ```bash
 git clone https://github.com/XIXIJCrG/PhotoTriage-AI.git

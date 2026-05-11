@@ -2,9 +2,14 @@ import unittest
 from unittest.mock import Mock, patch
 
 from core.providers import (
+    DEFAULT_PROVIDER_TYPE,
+    OPENAI_COMPATIBLE_PROVIDER,
+    OPENROUTER_FREE_BASE_URL,
+    OPENROUTER_FREE_MODEL,
     OpenAICompatibleVisionProvider,
     auth_headers,
     chat_completions_url,
+    default_provider_settings,
     models_url,
     normalize_base_url,
 )
@@ -32,6 +37,13 @@ class TestProviderUrls(unittest.TestCase):
     def test_auth_headers(self):
         self.assertEqual(auth_headers("sk-test"), {"Authorization": "Bearer sk-test"})
         self.assertIsNone(auth_headers(""))
+
+    def test_default_provider_is_free_cloud_preset(self):
+        provider, base_url, model = default_provider_settings()
+        self.assertEqual(DEFAULT_PROVIDER_TYPE, OPENAI_COMPATIBLE_PROVIDER)
+        self.assertEqual(provider, OPENAI_COMPATIBLE_PROVIDER)
+        self.assertEqual(base_url, OPENROUTER_FREE_BASE_URL)
+        self.assertEqual(model, OPENROUTER_FREE_MODEL)
 
 
 class TestOpenAICompatibleVisionProvider(unittest.TestCase):
@@ -86,6 +98,17 @@ class TestOpenAICompatibleVisionProvider(unittest.TestCase):
 
         self.assertTrue(ok)
         self.assertEqual(info, "target")
+
+    def test_openrouter_headers_include_app_identity(self):
+        provider = OpenAICompatibleVisionProvider(
+            base_url="https://openrouter.ai/api/v1",
+            model="openrouter/free",
+            api_key="sk-test",
+        )
+        headers = provider.headers()
+        self.assertEqual(headers["Authorization"], "Bearer sk-test")
+        self.assertIn("github.com/XIXIJCrG/PhotoTriage-AI", headers["HTTP-Referer"])
+        self.assertEqual(headers["X-Title"], "PhotoTriage AI")
 
 
 if __name__ == "__main__":

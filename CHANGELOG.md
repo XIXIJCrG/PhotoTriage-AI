@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.5 - 2026-05-12
+
+- Switched fresh installs to a free OpenRouter cloud trial preset by default.
+- Added quick provider preset buttons for cloud trial and local llama.cpp.
+- Added OpenRouter app identity headers for cloud requests.
+- Updated README and privacy docs to emphasize Windows packages and cloud-first onboarding.
+
 ## 0.1.4 - 2026-05-11
 
 - Display group recommendations directly on result cards.

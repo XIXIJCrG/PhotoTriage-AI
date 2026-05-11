@@ -1,6 +1,6 @@
 # Privacy
 
-PhotoTriage AI is designed as a local-first photo review tool with explicit opt-in cloud support.
+PhotoTriage AI is designed to make photo privacy choices explicit. New installs include a cloud trial preset for easier setup, while local model mode remains available for fully local workflows.
 
 ## Local Mode
 
@@ -8,7 +8,7 @@ In local mode, photos are resized on your computer and sent only to your local O
 
 ## Cloud Mode
 
-Cloud provider support is explicit and opt-in. When enabled, resized image data is sent to the configured OpenAI-compatible API provider for visual analysis. Cloud mode requires a Base URL, model name, and API key in Settings.
+Cloud mode sends resized image data to the configured OpenAI-compatible API provider for visual analysis. The default cloud trial preset uses OpenRouter's free model router, but still requires your own API key in Settings.
 
 Before the first cloud run, the app shows a privacy warning so users know images will leave the local machine.
 

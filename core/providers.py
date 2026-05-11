@@ -10,6 +10,14 @@ import requests
 
 LOCAL_PROVIDER = "local"
 OPENAI_COMPATIBLE_PROVIDER = "openai_compatible"
+DEFAULT_PROVIDER_TYPE = OPENAI_COMPATIBLE_PROVIDER
+
+LOCAL_BASE_URL = "http://127.0.0.1:8080/v1"
+LOCAL_MODEL = "local-vision-model"
+OPENROUTER_FREE_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_FREE_MODEL = "openrouter/free"
+APP_REFERER = "https://github.com/XIXIJCrG/PhotoTriage-AI"
+APP_TITLE = "PhotoTriage AI"
 
 SUPPORTED_PROVIDERS = {
     LOCAL_PROVIDER: "Local llama.cpp",
@@ -49,7 +57,15 @@ def auth_headers(api_key: str | None) -> dict[str, str] | None:
 
 
 def is_local_provider(provider_type: str | None) -> bool:
-    return (provider_type or LOCAL_PROVIDER) == LOCAL_PROVIDER
+    return (provider_type or DEFAULT_PROVIDER_TYPE) == LOCAL_PROVIDER
+
+
+def default_provider_settings(provider_type: str | None = None) -> tuple[str, str, str]:
+    """Return (provider_type, base_url, model) for a provider preset."""
+    provider = provider_type or DEFAULT_PROVIDER_TYPE
+    if provider == LOCAL_PROVIDER:
+        return LOCAL_PROVIDER, LOCAL_BASE_URL, LOCAL_MODEL
+    return OPENAI_COMPATIBLE_PROVIDER, OPENROUTER_FREE_BASE_URL, OPENROUTER_FREE_MODEL
 
 
 @dataclass
@@ -86,10 +102,17 @@ class OpenAICompatibleVisionProvider:
     def completions_url(self) -> str:
         return self.api_url or chat_completions_url(self.base_url)
 
+    def headers(self) -> dict[str, str] | None:
+        headers = auth_headers(self.api_key) or {}
+        if "openrouter.ai" in normalize_base_url(self.base_url).lower():
+            headers.setdefault("HTTP-Referer", APP_REFERER)
+            headers.setdefault("X-Title", APP_TITLE)
+        return headers or None
+
     def check_connection(self, timeout: float = 5) -> tuple[bool, str]:
         """检查 `/models` 是否可用,返回 (ok, model_or_error)。"""
         url = models_url(self.base_url or self.api_url or "")
-        headers = auth_headers(self.api_key)
+        headers = self.headers()
         try:
             r = requests.get(url, headers=headers, timeout=timeout)
             if r.status_code != 200:
@@ -126,7 +149,7 @@ class OpenAICompatibleVisionProvider:
         if self.disable_thinking and is_local_provider(self.provider_type):
             payload["chat_template_kwargs"] = {"enable_thinking": False}
 
-        headers = auth_headers(self.api_key)
+        headers = self.headers()
         last_err: str | None = None
         for attempt in range(self.max_retries + 1):
             try:

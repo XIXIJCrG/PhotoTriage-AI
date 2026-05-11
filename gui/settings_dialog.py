@@ -23,7 +23,13 @@ from PySide6.QtWidgets import (
 )
 
 from core.i18n import SUPPORTED_LANGUAGES, current_language, set_language, tr
-from core.providers import LOCAL_PROVIDER, OPENAI_COMPATIBLE_PROVIDER, chat_completions_url
+from core.providers import (
+    DEFAULT_PROVIDER_TYPE,
+    LOCAL_PROVIDER,
+    OPENAI_COMPATIBLE_PROVIDER,
+    chat_completions_url,
+    default_provider_settings,
+)
 
 from triage import API_URL, CONCURRENCY, DEFAULT_BASE_URL, DEFAULT_MODEL, MAX_IMAGE_SIZE
 
@@ -60,8 +66,20 @@ class SettingsDialog(QDialog):
         srv = QWidget()
         srv_lay = QFormLayout(srv)
         self.provider_combo = QComboBox()
-        self.provider_combo.addItem(tr("settings.provider_local"), LOCAL_PROVIDER)
         self.provider_combo.addItem(tr("settings.provider_openai_compatible"), OPENAI_COMPATIBLE_PROVIDER)
+        self.provider_combo.addItem(tr("settings.provider_local"), LOCAL_PROVIDER)
+        self.provider_combo.currentIndexChanged.connect(self._on_provider_changed)
+        preset_row = QWidget()
+        preset_lay = QHBoxLayout(preset_row)
+        preset_lay.setContentsMargins(0, 0, 0, 0)
+        preset_lay.setSpacing(6)
+        cloud_preset_btn = QPushButton(tr("settings.use_cloud_preset"))
+        cloud_preset_btn.clicked.connect(lambda: self._apply_provider_preset(OPENAI_COMPATIBLE_PROVIDER))
+        local_preset_btn = QPushButton(tr("settings.use_local_preset"))
+        local_preset_btn.clicked.connect(lambda: self._apply_provider_preset(LOCAL_PROVIDER))
+        preset_lay.addWidget(cloud_preset_btn)
+        preset_lay.addWidget(local_preset_btn)
+        preset_lay.addStretch(1)
         self.base_url_edit = QLineEdit()
         self.base_url_edit.setPlaceholderText(DEFAULT_BASE_URL)
         self.model_edit = QLineEdit()
@@ -80,6 +98,7 @@ class SettingsDialog(QDialog):
         pick_btn.clicked.connect(self._pick_script)
         script_lay.addWidget(pick_btn)
         srv_lay.addRow(tr("settings.provider"), self.provider_combo)
+        srv_lay.addRow(tr("settings.presets"), preset_row)
         srv_lay.addRow(tr("settings.base_url"), self.base_url_edit)
         srv_lay.addRow(tr("settings.model"), self.model_edit)
         srv_lay.addRow(tr("settings.api_key"), self.api_key_edit)
@@ -167,9 +186,35 @@ class SettingsDialog(QDialog):
         if path:
             self.lr_exe_edit.setText(path)
 
+    def _apply_provider_preset(self, provider_type: str):
+        provider, base_url, model = default_provider_settings(provider_type)
+        idx = self.provider_combo.findData(provider)
+        if idx >= 0:
+            old = self.provider_combo.blockSignals(True)
+            self.provider_combo.setCurrentIndex(idx)
+            self.provider_combo.blockSignals(old)
+        self.base_url_edit.setText(base_url)
+        self.model_edit.setText(model)
+
+    def _on_provider_changed(self):
+        provider = self.provider_combo.currentData() or DEFAULT_PROVIDER_TYPE
+        _, default_base, default_model = default_provider_settings(provider)
+        current_base = self.base_url_edit.text().strip()
+        current_model = self.model_edit.text().strip()
+        known_bases = {default_provider_settings(LOCAL_PROVIDER)[1],
+                       default_provider_settings(OPENAI_COMPATIBLE_PROVIDER)[1],
+                       DEFAULT_BASE_URL}
+        known_models = {default_provider_settings(LOCAL_PROVIDER)[2],
+                        default_provider_settings(OPENAI_COMPATIBLE_PROVIDER)[2],
+                        DEFAULT_MODEL}
+        if not current_base or current_base in known_bases:
+            self.base_url_edit.setText(default_base)
+        if not current_model or current_model in known_models:
+            self.model_edit.setText(default_model)
+
     def _load(self):
         s = app_settings()
-        provider_type = s.value("provider/type", LOCAL_PROVIDER) or LOCAL_PROVIDER
+        provider_type = s.value("provider/type", DEFAULT_PROVIDER_TYPE) or DEFAULT_PROVIDER_TYPE
         idx = self.provider_combo.findData(provider_type)
         self.provider_combo.setCurrentIndex(idx if idx >= 0 else 0)
         idx = self.lang_combo.findData(current_language())
@@ -210,7 +255,7 @@ class SettingsDialog(QDialog):
         set_language(self.lang_combo.currentData())
         base_url = self.base_url_edit.text().strip() or DEFAULT_BASE_URL
         model = self.model_edit.text().strip() or DEFAULT_MODEL
-        s.setValue("provider/type", self.provider_combo.currentData() or LOCAL_PROVIDER)
+        s.setValue("provider/type", self.provider_combo.currentData() or DEFAULT_PROVIDER_TYPE)
         s.setValue("provider/base_url", base_url)
         s.setValue("provider/model", model)
         s.setValue("provider/api_key", self.api_key_edit.text().strip())
