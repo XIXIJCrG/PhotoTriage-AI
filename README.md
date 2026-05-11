@@ -109,7 +109,10 @@ For local `llama.cpp`, copy [start-triage-server.example.bat](start-triage-serve
 
 ### For Users
 
-Download the latest Windows portable ZIP from the [Releases](https://github.com/XIXIJCrG/PhotoTriage-AI/releases) page, unzip it, and run `PhotoTriageAI.exe`.
+Download either Windows package from the [Releases](https://github.com/XIXIJCrG/PhotoTriage-AI/releases) page:
+
+- `PhotoTriageAI-windows.exe`: single-file app, easiest to try.
+- `PhotoTriageAI-windows-portable.zip`: portable folder package; unzip it and run `PhotoTriageAI.exe`.
 
 On first launch:
 

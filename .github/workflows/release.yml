@@ -40,10 +40,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PhotoTriageAI-windows-portable
-          path: dist/PhotoTriageAI-windows-portable.zip
+          path: |
+            dist/PhotoTriageAI-windows-portable.zip
+            dist/PhotoTriageAI-windows.exe
 
       - name: Attach package to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/PhotoTriageAI-windows-portable.zip
+          files: |
+            dist/PhotoTriageAI-windows-portable.zip
+            dist/PhotoTriageAI-windows.exe

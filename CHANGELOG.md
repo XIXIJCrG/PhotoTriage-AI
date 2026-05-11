@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.6 - 2026-05-12
+
+- Added a standalone Windows EXE release asset in addition to the portable ZIP.
+- Updated release documentation to make the EXE download path clear.
+
 ## 0.1.5 - 2026-05-12
 
 - Switched fresh installs to a free OpenRouter cloud trial preset by default.
